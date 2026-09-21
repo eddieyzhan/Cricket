@@ -1,109 +1,96 @@
-<p align="center"><img src="assets/cricket.svg" width="76" alt="Cricket" /></p>
-<h1 align="center">Cricket</h1>
-<p align="center">Files, a little closer.</p>
-<p align="center">A small desktop app for sharing files with your other devices and your favourite people.<br/>Built with Tauri, powered by croc, with private GitHub chats and delivery receipts.</p>
+<p align="center"><img src="assets/cricket.svg" width="76" alt="Cricket file transfer app" /></p>
 
-> **Preview 0.1.2.** [Download for Windows or Linux](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.2). Includes public-relay checks and clearer transfer failures. [Mac preview 0.1.1](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.1) · [Verification details](docs/VALIDATION.md).
+# Cricket — cross-platform file transfer
 
-![Cricket's chat-style interface, showing a file history and a receive button with fictional preview data](docs/preview.png)
+**Send files and folders between Windows, Linux and macOS computers with a lightweight desktop GUI for [croc](https://github.com/schollz/croc).** Choose a chat, add files and click **Send**. Cricket handles transfer codes for you and shows delivery receipts for your devices, friends and groups.
 
-## The idea
+File contents travel through croc's encrypted relay connection. Your GitHub account provides private chats and transfer history. Both computers need Cricket, a GitHub account and an internet connection; keep both apps running until the transfer completes.
 
-Choose a chat. Drop your files. Click **Send**.
+[Download Cricket](https://github.com/eddieyzhan/Cricket/releases) · [First transfer](#send-your-first-file) · [Troubleshooting](#troubleshooting) · [Build from source](docs/DEVELOPMENT.md)
 
-The other person gets a desktop notification, opens Cricket, and clicks **Receive**. Your chat keeps a history of files and receipts: waiting, seen, receiving, received, or retry needed. Group chats track each recipient separately.
+![Cricket desktop file sharing interface with a transfer history and Receive button; fictional preview data](docs/preview.png)
 
-- **Files and folders.** Drag and drop, or use native file/folder pickers.
-- **My devices.** Sign into the same GitHub account on two computers and create a chat with no other members.
-- **Saved people.** Usernames from your chats are remembered on this device. Search and select them when starting another chat or group. They are cleared when you disconnect your account.
-- **People and groups.** Create a chat with GitHub usernames. Cricket creates a private repository and invites those people.
-- **Durable receipts.** Offers are GitHub issues; receipts and retry requests are append-only comments. Failed receipt writes wait in a local outbox.
-- **An actual small desktop app.** Tauri uses the operating system webview. React handles the interface; Rust owns credentials, networking, and processes. There is no bundled Chromium or Node runtime.
-- **Made for agents too.** Semantic controls, keyboard access, descriptive labels, stable test IDs, and an authenticated local JSON API with a zero-dependency Node CLI.
+## Download and install
 
-GitHub stores **filenames, sizes, participants, expiring croc codes, and receipts**. File contents are sent by croc and are never uploaded to the chat repository. Chat members and GitHub can read this metadata, including the transfer codes. A private chat is a trust boundary, not encryption of metadata from GitHub.
+Cricket is an **early preview**. Windows and Linux packages are at **0.1.2**, including the relay-selection fix. The available macOS packages are **0.1.1** and do not include that fix. [See what has been tested](docs/VALIDATION.md).
 
-## Use Cricket
+| Your computer | Download | How to install |
+| --- | --- | --- |
+| Windows x64 | [Installer](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_x64-setup.exe) or [portable ZIP](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_windows_x64-portable.zip) | Run the installer, or extract the **whole ZIP** and open `Cricket.exe`. |
+| Debian / Ubuntu x64 | [DEB package](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_amd64.deb) | In the download folder, run `sudo apt install ./Cricket_0.1.2_amd64.deb`. |
+| Other Linux x64 | [AppImage](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_amd64.AppImage) | Make it executable with `chmod +x Cricket_0.1.2_amd64.AppImage`, then run `./Cricket_0.1.2_amd64.AppImage`. Compatible system libraries are required. |
+| Apple Silicon Mac | [DMG, preview 0.1.1](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.1/Cricket_0.1.1_aarch64.dmg) | Open the disk image and drag Cricket into Applications. |
+| Intel Mac | [DMG, preview 0.1.1](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.1/Cricket_0.1.1_x64.dmg) | Open the disk image and drag Cricket into Applications. |
 
-1. Install a build from [Releases](https://github.com/eddieyzhan/Cricket/releases), or build locally below.
-2. Connect GitHub. This preview can reuse an existing **GitHub CLI** login, or save an access token in your operating system's credential vault. A classic token with `repo` scope supports chat creation and invitations; this scope grants broad private-repository access.
-3. Click **New chat** and select saved people or add a GitHub username. Choose **My devices** with nobody selected. Group names are optional.
-4. Friends accept their invitation in Cricket or on GitHub, then refresh. The chat appears automatically on their devices.
-5. Choose that chat, add files, and click **Send**. The receiver chooses a download folder. Cricket creates a unique subfolder for each receive attempt, avoiding overwriting existing files.
+Packaged builds include **croc 11.5.3**. You do **not** need Node.js, Rust or a separate croc installation to use them. Packages are unsigned; Mac builds are not notarized. Checksums are on the corresponding release page. See the [platform setup guide](docs/SETUP.md) for prerequisites and sign-in options.
 
-The pinned croc **11.5.3** executable is included in packaged builds. You do not need to install croc separately.
+## Send your first file
 
-**Keep the sender and receiver online during a transfer.** A new offer waits for up to 15 minutes. Once croc reports data progress, the process allows up to 24 hours for the transfer. Cricket uses encrypted croc relay transfers; it does not provide offline file storage. Closing the window keeps Cricket in the tray for polling and notifications. Use the tray menu to quit.
+### 1. Connect GitHub on both computers
 
-Notifications are polled: normally every 30 seconds while the window is visible, 90 seconds in the tray, and 120 seconds after a sync error. Chat discovery runs every five minutes or immediately on manual refresh. OS notification settings still apply.
-
-### When something stops
-
-Version 0.1.2 checks a small encrypted round trip before choosing a public
-relay, avoiding reachable relays whose transfer handshake fails. Update the
-**sending device** and retry there; existing receivers understand the new offer.
-Preparing a send can take several seconds while relay candidates are checked.
-Failures retain a specific explanation in the chat, without exposing croc output
-or transfer codes. See [validation](docs/VALIDATION.md) for the reproduced failure.
-
-The transfer stays in the chat. A recipient can **Ask to resend**, and the original sending device can **Retry**. Retrying generates a new secret and attempt number; old receipts cannot complete the new attempt. Already received recipients are never automatically resent files. Changed or missing source files must be selected as a new transfer. Folder retries check the included paths, sizes, and modification times.
-
-**Sent** means the sender's croc process finished successfully. **Received** means the receiving account published its successful receipt. **Seen** means a chat was opened; it does not claim a person opened the downloaded file. Receipt sync failures do not turn an incomplete transfer into a success.
-
-## Build and develop
-
-Install Node.js **22.12+**, stable Rust, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your operating system. On Windows, Rust must be on `PATH`, and Visual Studio C++ Build Tools plus the Windows SDK are required. On Linux, also install the development packages for Secret Service/D-Bus and OpenSSL (`libdbus-1-dev`, `libssl-dev` on Debian/Ubuntu).
+Install [GitHub CLI](https://cli.github.com/) and sign in:
 
 ```sh
-npm ci
-npm run prepare:croc
-npm run desktop
+gh auth login --hostname github.com --git-protocol https --web --scopes repo
 ```
 
-`prepare:croc` downloads the host platform's official croc release, verifies a SHA-256 pinned in source, and includes the upstream license. Supported build hosts: Windows x64/ARM64, macOS Intel/Apple Silicon, Linux x64/ARM64. Build on the target operating system. Release signing and macOS notarization are not configured in this preview.
+Open Cricket and click **Sign in with GitHub CLI**. You can instead choose **Use an access token**; see [token setup](docs/SETUP.md#preview-sign-in). The `repo` scope allows Cricket to create private chats and grants broad private-repository access. Cricket stores its credential in your operating system's vault.
 
-```sh
-# Browser-only interactive design preview (no real transfers or GitHub writes)
-npm run dev
+### 2. Choose who receives the files
 
-# Local checks
-npm run check
-npm run audit:privacy
-npm run build
-cargo test --manifest-path src-tauri/Cargo.toml
-cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
-node tools/test-croc.mjs
+| Send to… | What to do |
+| --- | --- |
+| Your other computer | Sign into the **same GitHub account** on both. On one computer, select **New chat**, leave recipients empty and click **My devices**. Click **Sync chats** on the other. |
+| A friend | Select **New chat**, add their GitHub username and create the chat. They accept the repository invitation in Cricket or GitHub, then click **Sync chats**. |
+| A group | Add multiple GitHub usernames. Each person accepts the invitation; the chat tracks delivery separately for each recipient. |
 
-# Package on the current platform
-npm run tauri -- build
-# Or choose one bundle, e.g. Windows:
-npm run tauri -- build --bundles nsis
-```
+### 3. Send and receive
 
-The browser preview is explicitly labelled and uses fictional data. Native builds start with GitHub setup and use the real backend.
+1. Select the chat on the sending computer.
+2. Drag in files or folders, or use **Add files** / **Add folders**.
+3. Click **Send**. Cricket 0.1.2 checks for a working relay before sharing the offer, so preparation may take several seconds.
+4. On the receiving computer, open the chat, click **Receive** and choose a download folder. Cricket creates a new subfolder for the transfer.
+5. Wait for **Received**. Keep both computers online and Cricket running while files transfer.
 
-The optional packaging workflow is **manual only**. It refuses to run in private repositories, uses standard public runners, and uploads packages directly to an existing draft release. It creates no Actions artifacts or caches and never runs on a push. Windows packaging is performed locally; Linux and macOS builds can be requested together once the local checks pass. Repository Actions are disabled between releases; enable them only for a deliberate packaging run. Standard public runners are [free under GitHub's runner policy](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
+A new offer waits for up to **15 minutes**. Closing the window keeps Cricket in the system tray; use the tray menu to quit. Incoming offers are polled rather than delivered instantly, so use **Sync chats** when you want to check immediately.
 
-### GitHub browser sign-in
+## What Cricket does
 
-Branded browser sign-in uses GitHub's device authorization flow and requires registering a Cricket OAuth app with device flow enabled. Set `CRICKET_GITHUB_CLIENT_ID` **when compiling Rust** to show the **Continue with GitHub** button. No client secret belongs in the app. Builds without this configuration still support GitHub CLI and token sign-in. See [SETUP.md](docs/SETUP.md).
+- **File and folder sharing:** transfer individual files or whole directories through an encrypted croc relay connection.
+- **Transfers between your own devices:** one GitHub account, with a shared transfer history.
+- **Sharing with friends and groups:** saved usernames, private chat repositories and per-recipient receipts.
+- **Retry failed transfers:** resend from the original computer without losing the transfer history. Version 0.1.2 checks candidate relays and retains useful failure explanations.
+- **Lightweight desktop interface:** Tauri uses the system webview; there is no bundled Chromium or Node runtime.
+- **Agent and CLI access:** an authenticated local API and Node helper support scripted transfers. See the [agent guide](docs/AGENT.md).
 
-## For AI agents
+Cricket is for sending files while both sides are online. It does not provide offline cloud storage, automatic folder synchronization or text messaging. A group transfer sends a separate copy to each recipient.
 
-Read [the agent guide](docs/AGENT.md). With Cricket running:
+## Troubleshooting
 
-```sh
-node tools/cricket.mjs status
-node tools/cricket.mjs send --chat alice/cricket-abc123 --file /absolute/path/photo.jpg
-node tools/cricket.mjs receive --transfer alice/cricket-abc123#1 --directory /absolute/path/Downloads
-```
+| Problem | What to try |
+| --- | --- |
+| Transfer fails a few seconds after **Receive** | Update the **sending computer** to 0.1.2, then click **Retry** there and **Receive** again on the other computer. Updating only the receiver cannot move an existing offer to a working relay. |
+| Transfer expired or the sender went offline | Keep both apps open. The receiver can choose **Ask to resend**; the original sending computer must choose **Retry**. |
+| Source files changed or moved | Add the files again and create a new transfer. Retry checks the original files before sending. |
+| Chat does not appear | Check the GitHub account, accept the invitation and click **Sync chats**. **New chat → Join existing chat** can import a known Cricket repository. |
+| Linux sign-in cannot save a credential | Start and unlock a Secret Service-compatible credential vault, such as GNOME Keyring. See [Linux setup](docs/SETUP.md#preview-sign-in). |
+| No desktop notification | Leave Cricket running and allow notifications in your OS. Open the chat and sync manually to check for an offer. |
 
-Use exact repository and transfer IDs from `status`; never guess a recipient from a similar name. Successful command submission starts a transfer. Inspect the delivery receipt to confirm completion.
+**Sent** confirms that the sender finished; **Received** confirms the recipient's successful receipt. **Seen** only means the chat was opened. Failed receipts can wait locally until GitHub is reachable again.
 
-## Design and boundaries
+If you report a problem, include the app version, operating systems on both sides and the visible error. Do not post transfer codes, tokens, local state files or private-chat contents in a public issue. More details: [setup and troubleshooting](docs/SETUP.md) · [validation](docs/VALIDATION.md).
 
-See [architecture and protocol](docs/ARCHITECTURE.md) and [security notes](SECURITY.md).
+## Privacy and limits
 
-Current limits: ten people per chat, ten simultaneous local deliveries, 200 selected top-level items per transfer, 100,000 entries per selected folder, and 2,000 entries per GitHub list. Very large histories will eventually need archiving. GitHub outages delay invitations, offers, and receipts. A group sends one copy per recipient. This is file sharing, not a messaging service or an unattended folder sync tool.
+**File contents are not uploaded to GitHub.** GitHub stores private chat metadata: filenames, sizes, participants, expiring croc bearer codes and receipts. GitHub and every chat member can read that metadata and those codes, so only share a chat with people you trust. Encryption of file data does not hide chat metadata from GitHub. See [Security](SECURITY.md).
 
-MIT licensed. [croc](https://github.com/schollz/croc) is MIT licensed by Zack Scholl and contributors. Cricket is an independent project, not affiliated with GitHub or croc's maintainers.
+Current limits include ten members per chat, ten simultaneous local deliveries, 200 selected top-level items per transfer and 100,000 entries per selected folder. GitHub list operations are limited to 2,000 entries. Very large histories need future archiving support.
+
+## For developers and agents
+
+- [Build and develop](docs/DEVELOPMENT.md): source setup, local tests, packaging and browser-only demo.
+- [Agent guide](docs/AGENT.md): status, send, receive, retry and authenticated local API.
+- [Architecture](docs/ARCHITECTURE.md): private chat manifests, transfer offers and receipt protocol.
+- [Validation](docs/VALIDATION.md): checks performed and platform limitations.
+
+Licensed under [MIT](LICENSE). [croc](https://github.com/schollz/croc) is MIT licensed by Zack Scholl and contributors. Cricket is independent of GitHub and croc's maintainers.

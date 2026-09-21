@@ -2,12 +2,12 @@
 
 ## Install the desktop preview
 
-Download a package and `SHA256SUMS` from [Cricket's release page](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.1).
+Use the [download table in the README](../README.md#download-and-install) for the correct package: **0.1.2 for Windows/Linux**, or **0.1.1 for macOS**. Download checksums from the matching release page. macOS 0.1.1 does not include the sender-side relay checks added in 0.1.2.
 
 | Computer                 | Package          | Install                                                                                          |
 | ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------ |
 | Windows x64              | `x64-setup.exe`  | Open the installer. For the portable ZIP, extract the whole folder before opening `Cricket.exe`. |
-| Linux x64, Debian/Ubuntu | `amd64.deb`      | Install with your package manager, for example `sudo apt install ./Cricket_0.1.1_amd64.deb`.     |
+| Linux x64, Debian/Ubuntu | `amd64.deb`      | Install with your package manager, for example `sudo apt install ./Cricket_0.1.2_amd64.deb`.     |
 | Linux x64, AppImage      | `amd64.AppImage` | Make the downloaded file executable, then open it.                                               |
 | Apple Silicon Mac        | `aarch64.dmg`    | Open the disk image and drag Cricket into Applications.                                          |
 | Intel Mac                | `x64.dmg`        | Open the disk image and drag Cricket into Applications.                                          |
@@ -18,8 +18,8 @@ Linux packages are built on Ubuntu 22.04; other distributions must provide compa
 
 An installed build includes croc and needs a GitHub account. You can:
 
-1. Use [GitHub CLI](https://cli.github.com/): run `gh auth login --hostname github.com --git-protocol https --web --scopes repo`, finish browser authorization, then click **Use GitHub CLI sign-in** in Cricket. Cricket retrieves the credential from the installed CLI only after that explicit click, verifies the account, and saves it in the system credential vault.
-2. Use a personal access token: open **Connect with an access token instead**. A classic token with the `repo` scope supports private repository creation, invitations, issues, and manifests. This scope grants broad access to repositories; consider a dedicated GitHub account if you want to isolate Cricket's authorization. Never put a token in a repository or an environment file committed to Git.
+1. Use [GitHub CLI](https://cli.github.com/): run `gh auth login --hostname github.com --git-protocol https --web --scopes repo`, finish browser authorization, then click **Sign in with GitHub CLI** in Cricket. Cricket retrieves the credential from the installed CLI only after that explicit click, verifies the account, and saves it in the system credential vault.
+2. Use a personal access token: open **Use an access token**. A classic token with the `repo` scope supports private repository creation, invitations, issues, and manifests. This scope grants broad access to repositories; consider a dedicated GitHub account if you want to isolate Cricket's authorization. Never put a token in a repository or an environment file committed to Git.
 
 Fine-grained tokens can be used for existing chat repositories when granted the necessary repository permissions, but their owner/repository restrictions can prevent discovery, new repository creation, or invitations. Full first-run behavior is tested with a GitHub CLI token.
 
