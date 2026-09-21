@@ -65,7 +65,7 @@ No GitHub Actions, hosted Cricket server, database service, or webhook endpoint 
 
 ## Next steps
 
-- Validate native Linux and macOS builds and notification activation.
+- Exercise Linux/macOS interactive desktops and notification activation with separate physical devices.
 - Register the project's OAuth application for a consistent browser sign-in experience.
 - Sign Windows/macOS releases and add a verified update mechanism.
 - Provide explicit device targeting for accounts with several devices.

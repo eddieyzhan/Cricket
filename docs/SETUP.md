@@ -1,5 +1,19 @@
 # GitHub and platform setup
 
+## Install the desktop preview
+
+Download a package and `SHA256SUMS` from [Cricket's release page](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.0).
+
+| Computer                 | Package          | Install                                                                                          |
+| ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------ |
+| Windows x64              | `x64-setup.exe`  | Open the installer. For the portable ZIP, extract the whole folder before opening `Cricket.exe`. |
+| Linux x64, Debian/Ubuntu | `amd64.deb`      | Install with your package manager, for example `sudo apt install ./Cricket_0.1.0_amd64.deb`.     |
+| Linux x64, AppImage      | `amd64.AppImage` | Make the downloaded file executable, then open it.                                               |
+| Apple Silicon Mac        | `aarch64.dmg`    | Open the disk image and drag Cricket into Applications.                                          |
+| Intel Mac                | `x64.dmg`        | Open the disk image and drag Cricket into Applications.                                          |
+
+Linux packages are built on Ubuntu 22.04; other distributions must provide compatible system libraries. These preview packages are unsigned and Mac builds are not notarized, so the OS may show a trust prompt. See [verification details](VALIDATION.md) for the scope of testing.
+
 ## Preview sign-in
 
 An installed build includes croc and needs a GitHub account. You can:

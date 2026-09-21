@@ -73,7 +73,7 @@ npm run tauri -- build --bundles nsis
 
 The browser preview is explicitly labelled and uses fictional data. Native builds start with GitHub setup and use the real backend.
 
-The optional packaging workflow is **manual only**. It refuses to run in private repositories, uses standard public runners, and uploads packages directly to an existing draft release. It creates no Actions artifacts or caches and never runs on a push. Windows packaging is performed locally; Linux and macOS builds can be requested together once the local checks pass.
+The optional packaging workflow is **manual only**. It refuses to run in private repositories, uses standard public runners, and uploads packages directly to an existing draft release. It creates no Actions artifacts or caches and never runs on a push. Windows packaging is performed locally; Linux and macOS builds can be requested together once the local checks pass. Repository Actions are disabled between releases; enable them only for a deliberate packaging run. Standard public runners are [free under GitHub's runner policy](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
 
 ### GitHub browser sign-in
 
