@@ -14,11 +14,23 @@ isolated loopback rendezvous, plus a separate explicit relay-fallback round trip
 Tests check spaces, Unicode filenames, empty folders and exact content equality.
 Command regression tests protect both automatic defaults and secret handling.
 
-The manual CI workflows run the same native tests and package for Linux and Mac.
-Codemagic is limited to one manually requested Apple Silicon run with a 20-minute
-cap; Linux and Intel Mac use free public GitHub runners. Build results are linked
-in the release notes. Mac package checks start the actual DMG app after relocating
-it outside the checkout and verify bundled croc discovery and the authenticated API.
+The [Linux job](https://github.com/eddieyzhan/Cricket/actions/runs/35668782597)
+passed the native tests, actual automatic folder transfer, relay fallback and
+packaging on Ubuntu 22.04. Apple Silicon tests, both transfer modes and DMG build
+passed in [one Codemagic run](https://codemagic.io/app/6ab1c15e880ddbbf94e408e2/build/6ab1c1c1980aca145e5946c3)
+(4m44s, Mac mini M2). Its final startup check failed because the test launched via
+macOS's `/var` symlink, which Tauri intentionally rejects. The test now resolves
+the temporary directory's real path; no application security check was weakened.
+The **same Codemagic DMG, without rebuilding**, subsequently
+[passed relocated startup and authenticated API checks](https://github.com/eddieyzhan/Cricket/actions/runs/35669880053)
+on a free Apple Silicon GitHub runner. Earlier diagnostic attempts and their
+failures remain visible in Actions; no additional Codemagic build was used.
+
+Intel Mac native tests and transfers passed in the initial packaging job; its
+package startup hit the same test-path issue. The corrected, Intel-only packaging
+run is linked in the release notes. Windows/Linux were not rebuilt for this test
+harness correction. Mac package checks start the actual DMG app outside the
+checkout and verify bundled croc discovery and the authenticated API.
 
 These same-host checks do not prove two-device LAN discovery, WAN traversal, or
 Fedora KDE desktop integration. A same-host test with deliberately unreachable
