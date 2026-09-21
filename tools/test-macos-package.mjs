@@ -8,6 +8,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -28,7 +29,9 @@ await assert.rejects(
   access(data),
   "Refusing to use an existing Cricket profile",
 );
-const temp = await mkdtemp(join(tmpdir(), "cricket-package-"));
+// macOS /var is a symlink to /private/var. Tauri intentionally refuses to
+// resolve resources through symlinked executable ancestors on macOS.
+const temp = await realpath(await mkdtemp(join(tmpdir(), "cricket-package-")));
 const mount = join(temp, "mounted");
 const dmgs = join(root, "src-tauri/target/release/bundle/dmg");
 const files = (await readdir(dmgs)).filter(
