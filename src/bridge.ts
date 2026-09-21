@@ -50,6 +50,7 @@ let preview: Snapshot = {
   device_id: device,
   device_name: "Windows laptop",
   chats,
+  contacts: ["jules", "mayachen", "oliver"],
   transfers: [
     transfer(
       1,
@@ -133,6 +134,13 @@ export async function call<T>(
         members: ["you", ...(args.members as string[]).filter(Boolean)],
       };
       preview.chats.push(chat);
+      preview.contacts = [
+        ...new Map(
+          [...preview.contacts, ...chat.members.filter((m) => m !== "you")].map(
+            (m) => [m.toLowerCase(), m],
+          ),
+        ).values(),
+      ].sort();
       value = chat;
       break;
     }

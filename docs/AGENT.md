@@ -10,13 +10,13 @@ The user's request determines the files, destination chat, and whether to receiv
 
 ## Desktop controls
 
-- **New chat** creates a private chat. The form labels are **Chat name** and **GitHub usernames**.
+- **New chat** creates a private chat. Use **GitHub username**, **Add username**, or **Add <login>** buttons in **Saved people**. Selected usernames appear as removable chips. **Chat name** appears for groups; **My devices** creates a personal chat with nobody selected.
 - **Search chats** filters by display name or GitHub username. `Ctrl+K` / `Cmd+K` focuses it.
 - Select the chat by its visible name. Open **Chat details** to verify GitHub usernames and repository.
 - **Add files** and **Add folders** open native pickers. Dragging onto the main pane also stages files.
 - Verify the staged names, then use **Send**. `Ctrl+Enter` / `Cmd+Enter` sends the current selection.
-- **Receive file(s)** opens a destination picker. The app creates a new subfolder within it.
-- **Retry transfer** or **Retry for username** runs only from the original sending device.
+- **Receive** opens a destination picker. The app creates a new subfolder within it.
+- **Retry** or **Retry for username** runs only from the original sending device.
 - **Ask to resend** persists a retry request; it does not start a new sender process.
 - **Sync chats** refreshes GitHub. **Account and settings** shows identity, platform, and engine version.
 
@@ -72,3 +72,5 @@ Send `Authorization: Bearer TOKEN`. POST bodies use `Content-Type: application/j
 Use the same user session as the desktop app. There is no remote listener, unauthenticated endpoint, arbitrary command execution endpoint, or credential endpoint. Treat successful send/receive responses as a job submission, then inspect receipts.
 
 Creating a chat with members sends GitHub repository invitations. Do this only when the user has asked to create that chat or invite those people. A personal chat with an empty members list does not invite anybody.
+
+Saved usernames are included in the authenticated snapshot as `contacts`. They are local account data, not a public contact directory. Group receipt details are collapsed; expand the receipt summary to inspect each recipient.

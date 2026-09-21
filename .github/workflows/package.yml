@@ -11,7 +11,7 @@ on:
       release:
         description: Existing draft release tag to attach packages to
         type: string
-        default: v0.1.0
+        default: v0.1.1
         required: true
 
 # No push/PR/schedule trigger, cache uploads, or Actions artifact storage.
@@ -59,9 +59,11 @@ jobs:
       - name: Verify platform croc transfer through a local relay
         run: node tools/test-croc.mjs
       - name: Native tests (reuse the release profile for packaging)
-        run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib
+        run: node tools/native.mjs cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib
       - name: Build native packages
         run: npm run tauri -- build
+      - name: Check public files and compiled paths
+        run: node tools/audit-public.mjs src-tauri/target/release/cricket
       - name: Attach packages directly to the draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

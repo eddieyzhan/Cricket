@@ -1,6 +1,6 @@
 [package]
 name = "cricket"
-version = "0.1.0"
+version = "0.1.1"
 description = "A little closer. File sharing with croc."
 authors = ["Cricket contributors"]
 edition = "2021"

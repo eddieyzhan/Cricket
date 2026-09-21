@@ -21,7 +21,6 @@ import {
   Github,
   Laptop,
   LoaderCircle,
-  LockKeyhole,
   Monitor,
   MoreHorizontal,
   Plus,
@@ -31,7 +30,6 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
-  Terminal,
   Upload,
   Users,
   X,
@@ -43,6 +41,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { call, desktop } from "./bridge";
 import {
   chatSummary,
+  parseMembers,
   incomingFor,
   needsRetry,
   sameUser,
@@ -131,6 +130,7 @@ function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
+    ref.current?.querySelector<HTMLInputElement>("input")?.focus();
     return () => ref.current?.close();
   }, []);
   return (
@@ -179,6 +179,7 @@ export default function App() {
   const [modal, setModal] = useState<"new" | "settings" | "about" | null>(null);
   const [newName, setNewName] = useState("");
   const [newMembers, setNewMembers] = useState("");
+  const [contactQuery, setContactQuery] = useState("");
   const [importRepo, setImportRepo] = useState("");
   const [token, setToken] = useState("");
   const [authCode, setAuthCode] = useState("");
@@ -353,7 +354,7 @@ export default function App() {
       key: t.key,
       directory,
     });
-    setNotice(`Receiving into ${saved}. You can keep using Cricket.`);
+    setNotice(`Saving to ${saved}`);
   };
   const send = () =>
     run("send", async () => {
@@ -395,15 +396,22 @@ export default function App() {
   const transfers = state.transfers
     .filter((t) => t.repo === selected)
     .sort((a, b) => a.created_at - b.created_at);
-  const waiting = state.transfers.filter(
-    (t) =>
-      incomingFor(t, state) &&
-      t.deliveries.some(
-        (d) =>
-          sameUser(d.recipient, login) &&
-          ["waiting", "seen"].includes(d.status),
-      ),
-  ).length;
+  const selectedMembers = parseMembers(newMembers);
+  const recipientDraft = parseMembers(`${newMembers},${contactQuery}`);
+  const addMember = (member: string) => {
+    const next = parseMembers(`${newMembers},${member}`).filter(
+      (m) => !sameUser(m, login),
+    );
+    setNewMembers(next.join(","));
+    setContactQuery("");
+  };
+  const contactSuggestions = state.contacts.filter(
+    (member) =>
+      !selectedMembers.some((m) => sameUser(m, member)) &&
+      member
+        .toLowerCase()
+        .includes(contactQuery.replace(/^@/, "").toLowerCase()),
+  );
   const connect = (method: "connect_cli" | "connect_token") =>
     run("connect", async () => {
       await call(method, method === "connect_token" ? { token } : {});
@@ -419,10 +427,6 @@ export default function App() {
     });
   const accountContent = (
     <>
-      <p className="muted">
-        Connect your GitHub account to keep your chats and delivery receipts
-        together.
-      </p>
       {state.oauth_available && (
         <button
           className="primary wide"
@@ -449,13 +453,11 @@ export default function App() {
         ) : (
           <Github size={18} />
         )}
-        Use GitHub CLI sign-in
+        Sign in with GitHub CLI
       </button>
-      <p className="fine">
-        Already signed into <code>gh</code>? Cricket can use that account.
-      </p>
+
       <details className="token-details">
-        <summary>Connect with an access token instead</summary>
+        <summary>Use an access token</summary>
         <label htmlFor="github-token">GitHub access token</label>
         <input
           id="github-token"
@@ -466,16 +468,14 @@ export default function App() {
           onChange={(e) => setToken(e.target.value)}
         />
         <p className="fine">
-          A classic token with the <code>repo</code> scope supports creating
-          private chats and inviting people. It grants broad repository access.
-          Stored in your system credential vault.
+          Requires <code>repo</code> access. Saved in your system keychain.
         </p>
         <button
           className="secondary wide"
           disabled={!token || Boolean(busy)}
           onClick={() => void connect("connect_token")}
         >
-          Connect account
+          Connect
         </button>
       </details>
     </>
@@ -484,21 +484,15 @@ export default function App() {
     <div className="app-shell">
       {!desktop && (
         <div className="preview-banner">
-          <Sparkles size={13} /> Interactive preview <span>·</span> Transfers
-          here are simulated. No files leave your browser.
+          <Sparkles size={12} /> Preview · Simulated transfers
         </div>
       )}
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-icon">
+        <div className="sidebar-toolbar">
+          <div className="brand">
             <CricketMark small />
-          </span>
-          <span>
-            Cricket<span className="brand-dot">.</span>
-          </span>
-        </div>
-        <div className="sidebar-heading">
-          <span>YOUR CHATS</span>
+            <span>Cricket</span>
+          </div>
           <button
             className="icon-button"
             aria-label="New chat"
@@ -507,7 +501,7 @@ export default function App() {
             disabled={!state.connected}
             onClick={() => setModal("new")}
           >
-            <Plus size={20} />
+            <Plus size={19} />
           </button>
         </div>
         <div className="search-field">
@@ -515,11 +509,10 @@ export default function App() {
           <input
             id="chat-search"
             aria-label="Search chats"
-            placeholder="Find a chat"
+            placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <kbd>{state.platform === "macos" ? "⌘ K" : "Ctrl K"}</kbd>
         </div>
         <nav className="chat-list" aria-label="Chats">
           {state.chats
@@ -569,14 +562,6 @@ export default function App() {
                 </button>
               );
             })}
-          {state.connected && !state.chats.length && (
-            <p className="sidebar-empty">
-              A familiar face.
-              <br />A file to share.
-              <br />
-              Start with a new chat.
-            </p>
-          )}
           {search &&
             !state.chats.some((c) =>
               `${c.name} ${c.members.join(" ")}`
@@ -608,10 +593,6 @@ export default function App() {
           </section>
         )}
         <div className="sidebar-bottom">
-          <div className="quiet-note">
-            <ShieldCheck size={16} />
-            <span>Small app. A little closer.</span>
-          </div>
           <button
             className="account-button"
             aria-label="Account and settings"
@@ -621,19 +602,7 @@ export default function App() {
               {(state.user?.name ?? login ?? "C").slice(0, 1) || "C"}
             </span>
             <span>
-              <strong>
-                {state.user?.name || login || "Make yourself at home"}
-              </strong>
-              <small>
-                {state.connected ? (
-                  <>
-                    <span className="online-dot" />
-                    {platformName(state.platform)} · this device
-                  </>
-                ) : (
-                  "Connect GitHub to start"
-                )}
-              </small>
+              <strong>{login || "Sign in"}</strong>
             </span>
             <Settings2 size={17} />
           </button>
@@ -668,45 +637,19 @@ export default function App() {
             <div className="welcome-mark">
               <CricketMark />
             </div>
-            <span className="eyebrow">LESS FRICTION. MORE CONNECTION.</span>
-            <h1>Files, a little closer.</h1>
-            <p className="welcome-copy">
-              From your laptop to your desktop.
-              <br />
-              From you to your favourite people.
-            </p>
+            <h1>Share with Cricket.</h1>
+            <p className="welcome-copy">Sign in to get started.</p>
             <div className="connect-card">{accountContent}</div>
-            <div className="welcome-features">
-              <span>
-                <LockKeyhole size={15} /> Encrypted file transfer
-              </span>
-              <span>
-                <Monitor size={15} /> Windows, Linux & macOS
-              </span>
-            </div>
           </section>
         ) : !chat ? (
           <section className="onboarding empty-home">
             <div className="welcome-mark">
               <CricketMark />
             </div>
-            <span className="eyebrow">HELLO, {login.toUpperCase()}</span>
-            <h1>
-              Good things are
-              <br />
-              better shared.
-            </h1>
-            <p className="welcome-copy">
-              Start a chat with a friend, your people,
-              <br />
-              or just your other computer.
-            </p>
+            <h1>Send a file.</h1>
             <button className="primary" onClick={() => setModal("new")}>
-              <Plus size={18} /> Start your first chat
+              <Plus size={17} /> New chat
             </button>
-            <p className="fine">
-              Each chat gets its own private GitHub repository.
-            </p>
           </section>
         ) : (
           <>
@@ -716,15 +659,10 @@ export default function App() {
                 <h1>{chat.name}</h1>
                 <p>
                   {chat.members.length === 1
-                    ? "Your files, between your devices"
+                    ? "My devices"
                     : chat.members.length > 2
-                      ? `${chat.members.length} people · ${chat.members
-                          .filter((m) => !sameUser(m, login))
-                          .map((m) => `@${m}`)
-                          .join(", ")}`
+                      ? `${chat.members.length} people`
                       : `@${chat.members.find((m) => !sameUser(m, login))}`}
-                  <span className="header-separator">·</span>
-                  <LockKeyhole size={11} /> Private chat
                 </p>
               </div>
               <button
@@ -753,23 +691,10 @@ export default function App() {
               ref={history}
               aria-label={`Transfer history with ${chat.name}`}
             >
-              <div className="chat-intro">
-                <span className="intro-icon">
-                  <LockKeyhole size={17} />
-                </span>
-                <p>A little space for your shared things.</p>
-                <span>
-                  Files travel with croc. Only transfer details live on GitHub.
-                </span>
-              </div>
               {!transfers.length ? (
                 <div className="empty-chat">
-                  <span className="empty-orbit">
-                    <Send size={31} strokeWidth={1.3} />
-                    <span className="orbit-dot" />
-                  </span>
-                  <h2>Send something their way.</h2>
-                  <p>Drop a file below to get things moving.</p>
+                  <File size={28} strokeWidth={1.4} />
+                  <p>No files yet</p>
                 </div>
               ) : (
                 transfers.map((t, index) => {
@@ -837,11 +762,6 @@ export default function App() {
                                   <strong title={f.name}>{f.name}</strong>
                                   <span>
                                     {f.directory ? "Folder" : sizeLabel(f.size)}
-                                    <span className="file-kind-dot">·</span>
-                                    {f.directory
-                                      ? "All included files"
-                                      : f.name.split(".").pop()?.toUpperCase() +
-                                        " file"}
                                   </span>
                                 </div>
                                 {allReceived && (
@@ -864,14 +784,8 @@ export default function App() {
                                     )
                                   }
                                 >
-                                  <ArrowDown size={17} /> Receive{" "}
-                                  {t.files.length === 1 ? "file" : "files"}
+                                  <ArrowDown size={15} /> Receive
                                 </button>
-                                <span>
-                                  {desktop
-                                    ? "Choose where to save"
-                                    : "Try the preview"}
-                                </span>
                               </div>
                             )}
                           {incoming && myDelivery?.status === "receiving" && (
@@ -885,11 +799,6 @@ export default function App() {
                             (needsRetry(myDelivery.status) ||
                               myDelivery.status === "sent") && (
                               <div className="retry-area">
-                                <p>
-                                  {myDelivery.status === "retry_requested"
-                                    ? "The sender has your retry request."
-                                    : "This transfer needs a fresh connection."}
-                                </p>
                                 <button
                                   className="text-button"
                                   disabled={
@@ -904,13 +813,21 @@ export default function App() {
                                 >
                                   <RefreshCw size={14} />
                                   {myDelivery.status === "retry_requested"
-                                    ? "Retry requested"
+                                    ? "Requested"
                                     : "Ask to resend"}
                                 </button>
                               </div>
                             )}
                           {mine && t.deliveries.length > 1 && (
-                            <div className="group-receipts">
+                            <details className="group-receipts">
+                              <summary>
+                                {
+                                  t.deliveries.filter(
+                                    (d) => d.status === "received",
+                                  ).length
+                                }{" "}
+                                of {t.deliveries.length} received
+                              </summary>
                               {t.deliveries.map((d) => (
                                 <div
                                   className="group-receipt"
@@ -951,59 +868,61 @@ export default function App() {
                                   )}
                                 </div>
                               ))}
-                            </div>
+                            </details>
                           )}
                         </div>
-                        <div
-                          className={`transfer-receipt ${retry ? "amber" : allReceived ? "complete" : ""}`}
-                        >
-                          {allReceived ? (
-                            <CheckCheck size={14} />
-                          ) : retry ? (
-                            <RefreshCw size={12} />
-                          ) : (
-                            <Clock3 size={12} />
-                          )}
-                          <span>
-                            {t.deliveries.length > 1
-                              ? `${t.deliveries.filter((d) => d.status === "received").length} of ${t.deliveries.length} received`
-                              : statusText[t.deliveries[0].status]}
-                          </span>
-                          {mine &&
-                            t.deliveries.length === 1 &&
-                            retry &&
-                            t.can_retry && (
+                        {(t.deliveries.length === 1 || jobs.length > 0) && (
+                          <div
+                            className={`transfer-receipt ${retry ? "amber" : allReceived ? "complete" : ""}`}
+                          >
+                            {allReceived ? (
+                              <CheckCheck size={14} />
+                            ) : retry ? (
+                              <RefreshCw size={12} />
+                            ) : (
+                              <Clock3 size={12} />
+                            )}
+                            <span>
+                              {t.deliveries.length > 1
+                                ? `${t.deliveries.filter((d) => d.status === "received").length} of ${t.deliveries.length} received`
+                                : statusText[t.deliveries[0].status]}
+                            </span>
+                            {mine &&
+                              t.deliveries.length === 1 &&
+                              retry &&
+                              t.can_retry && (
+                                <button
+                                  className="text-button"
+                                  disabled={Boolean(busy) || jobs.length > 0}
+                                  onClick={() =>
+                                    void run("retry", () =>
+                                      call("retry_transfer", {
+                                        key: t.key,
+                                        recipient: t.deliveries[0].recipient,
+                                      }),
+                                    )
+                                  }
+                                >
+                                  Retry
+                                </button>
+                              )}
+                            {jobs.map((j) => (
                               <button
+                                key={j.id}
                                 className="text-button"
-                                disabled={Boolean(busy) || jobs.length > 0}
+                                disabled={Boolean(busy)}
                                 onClick={() =>
-                                  void run("retry", () =>
-                                    call("retry_transfer", {
-                                      key: t.key,
-                                      recipient: t.deliveries[0].recipient,
-                                    }),
+                                  void run("cancel", () =>
+                                    call("cancel_transfer", { jobId: j.id }),
                                   )
                                 }
                               >
-                                Retry transfer
+                                Cancel
+                                {jobs.length > 1 ? ` for @${j.recipient}` : ""}
                               </button>
-                            )}
-                          {jobs.map((j) => (
-                            <button
-                              key={j.id}
-                              className="text-button"
-                              disabled={Boolean(busy)}
-                              onClick={() =>
-                                void run("cancel", () =>
-                                  call("cancel_transfer", { jobId: j.id }),
-                                )
-                              }
-                            >
-                              Cancel
-                              {jobs.length > 1 ? ` for @${j.recipient}` : ""}
-                            </button>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </article>
                     </div>
                   );
@@ -1043,26 +962,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <button
-                    className="drop-prompt"
-                    onClick={() => void run("files", () => choose())}
-                  >
-                    <span className="drop-symbol">
-                      <Upload size={20} strokeWidth={1.5} />
-                    </span>
-                    <span>
-                      <strong>
-                        {dragging
-                          ? "Let go. We’ll take it from here."
-                          : "Drop something worth sharing."}
-                      </strong>
-                      <small>
-                        Drag files here, or <span>browse files</span>
-                      </small>
-                    </span>
-                  </button>
-                )}
+                ) : null}
                 <div className="composer-actions">
                   <div className="add-actions">
                     <button
@@ -1073,7 +973,6 @@ export default function App() {
                       onClick={() => void run("files", () => choose())}
                     >
                       <Plus size={18} />
-                      <span>{queued.length ? "Add more" : "Files"}</span>
                     </button>
                     <button
                       className="add-file-button"
@@ -1083,9 +982,16 @@ export default function App() {
                       onClick={() => void run("files", () => choose(true))}
                     >
                       <Folder size={16} />
-                      <span>Folder</span>
                     </button>
                   </div>
+                  {!queued.length && (
+                    <button
+                      className="drop-prompt"
+                      onClick={() => void run("files", () => choose())}
+                    >
+                      Drop files
+                    </button>
+                  )}
                   <button
                     className="primary send-button"
                     data-testid="send-files"
@@ -1106,20 +1012,13 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <div className="composer-footnote">
-                <span>
-                  <LockKeyhole size={11} /> Encrypted with croc
-                </span>
-                <span>Keep both devices online until received.</span>
-              </div>
             </footer>
           </>
         )}
         {dragging && (
           <div className="drag-overlay">
             <Upload size={38} />
-            <h2>Drop your files here</h2>
-            <p>Ready to share with {chat?.name ?? "your people"}.</p>
+            <h2>Drop files</h2>
           </div>
         )}
       </main>
@@ -1133,24 +1032,11 @@ export default function App() {
           e.target.value = "";
         }}
       />
-      <div className="status-bar">
-        <span>
-          <span className={`status-dot ${state.error ? "warning" : ""}`} />
-          {state.pending_receipts
-            ? `${state.pending_receipts} receipt${state.pending_receipts === 1 ? "" : "s"} waiting to sync`
-            : state.connected
-              ? state.error
-                ? "Sync needs attention"
-                : "All caught up"
-              : "Ready when you are"}
-        </span>
-        <span>
-          {waiting
-            ? `${waiting} transfer${waiting === 1 ? "" : "s"} waiting`
-            : state.device_name}
-          <span className="status-divider">/</span>Cricket 0.1
-        </span>
-      </div>
+      {state.pending_receipts > 0 && (
+        <div className="sync-note" role="status">
+          Syncing receipts…
+        </div>
+      )}
       {(error || state.error) && (
         <div role="alert" className="toast error-toast">
           <CircleHelp size={19} />
@@ -1181,68 +1067,123 @@ export default function App() {
         </div>
       )}
       {modal === "new" && (
-        <Modal title="Make a little connection." onClose={() => setModal(null)}>
-          <p className="muted">
-            A friend, a group, or your other devices. Every chat has a private
-            space on GitHub.
-          </p>
+        <Modal title="New chat" onClose={() => setModal(null)}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               void run("new", async () => {
+                const members = recipientDraft.filter(
+                  (m) => !sameUser(m, login),
+                );
                 const c = await call<Chat>("create_chat", {
-                  name: newName,
-                  members: newMembers
-                    .split(/[\s,]+/)
-                    .map((s) => s.replace(/^@/, ""))
-                    .filter(Boolean),
+                  name:
+                    newName.trim() ||
+                    (members.length
+                      ? members.join(", ").slice(0, 80)
+                      : "My devices"),
+                  members,
                 });
                 setSelected(c.repo);
                 setModal(null);
                 setNewName("");
                 setNewMembers("");
+                setContactQuery("");
               });
             }}
           >
-            <label htmlFor="chat-name">Chat name</label>
-            <input
-              autoFocus
-              id="chat-name"
-              required
-              maxLength={80}
-              placeholder="e.g. Weekend crew"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <label htmlFor="chat-members">
-              GitHub usernames <span>optional</span>
-            </label>
-            <input
-              id="chat-members"
-              placeholder="maya, oliver, jules"
-              value={newMembers}
-              onChange={(e) => setNewMembers(e.target.value)}
-            />
-            <p className="fine">
-              Separate usernames with commas. Leave this empty for a chat
-              between your own devices. Friends accept an invitation in Cricket
-              or on GitHub.
-            </p>
+            {selectedMembers.length > 0 && (
+              <div className="recipient-chips" aria-label="Selected people">
+                {selectedMembers.map((member) => (
+                  <button
+                    type="button"
+                    key={member.toLowerCase()}
+                    aria-label={`Remove ${member}`}
+                    onClick={() =>
+                      setNewMembers(
+                        selectedMembers
+                          .filter((m) => !sameUser(m, member))
+                          .join(","),
+                      )
+                    }
+                  >
+                    @{member}
+                    <X size={12} />
+                  </button>
+                ))}
+              </div>
+            )}
+            <label htmlFor="chat-members">To</label>
+            <div className="recipient-input">
+              <input
+                autoFocus
+                id="chat-members"
+                aria-label="GitHub username"
+                placeholder="GitHub username"
+                value={contactQuery}
+                maxLength={40}
+                pattern="@?[A-Za-z0-9-]{1,39}"
+                onChange={(e) => setContactQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && contactQuery.trim()) {
+                    e.preventDefault();
+                    if (e.currentTarget.checkValidity())
+                      addMember(contactQuery);
+                    else e.currentTarget.reportValidity();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Add username"
+                disabled={!/^@?[A-Za-z0-9-]{1,39}$/.test(contactQuery.trim())}
+                onClick={() => addMember(contactQuery)}
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+            {contactSuggestions.length > 0 && (
+              <div className="saved-contacts" aria-label="Saved people">
+                {contactSuggestions.map((member) => (
+                  <button
+                    type="button"
+                    key={member.toLowerCase()}
+                    aria-label={`Add ${member}`}
+                    onClick={() => addMember(member)}
+                  >
+                    <span className="mini-avatar">
+                      {member[0].toUpperCase()}
+                    </span>
+                    <span>@{member}</span>
+                    <Plus size={15} />
+                  </button>
+                ))}
+              </div>
+            )}
+            {recipientDraft.length > 1 && (
+              <>
+                <label htmlFor="chat-name">Name</label>
+                <input
+                  id="chat-name"
+                  aria-label="Chat name"
+                  maxLength={80}
+                  placeholder="Group name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </>
+            )}
             <button
               className="primary wide"
               type="submit"
-              disabled={!newName.trim() || Boolean(busy)}
+              disabled={Boolean(busy)}
             >
-              {busy === "new" ? (
-                <LoaderCircle className="spin" size={17} />
-              ) : (
-                <Plus size={17} />
-              )}{" "}
-              Create private chat
+              {busy === "new" && <LoaderCircle className="spin" size={16} />}
+              {recipientDraft.length ? "Create chat" : "My devices"}
             </button>
           </form>
           <details className="token-details">
-            <summary>Already have a chat repository?</summary>
+            <summary>Join existing chat</summary>
             <label htmlFor="import-repo">Repository</label>
             <input
               id="import-repo"
@@ -1265,20 +1206,19 @@ export default function App() {
                 })
               }
             >
-              Join existing chat
+              Join
             </button>
           </details>
         </Modal>
       )}
       {modal === "settings" && (
-        <Modal title="Your little corner." onClose={() => setModal(null)}>
+        <Modal title="Settings" onClose={() => setModal(null)}>
           {state.connected ? (
             <>
               <div className="settings-account">
                 <Github size={24} />
                 <div>
                   <strong>@{login}</strong>
-                  <small>Connected to GitHub</small>
                 </div>
                 <span className="pill">Connected</span>
               </div>
@@ -1290,43 +1230,29 @@ export default function App() {
               </div>
               <div className="settings-row">
                 <span>
-                  <Monitor size={17} /> Operating system
+                  <Monitor size={17} /> System
                 </span>
                 <strong>{platformName(state.platform)}</strong>
               </div>
               <div className="settings-row">
                 <span>
-                  <ShieldCheck size={17} /> Transfer engine
+                  <ShieldCheck size={17} /> croc
                 </span>
                 <strong>
                   {state.croc_version?.replace("croc version ", "") ??
                     "Not available"}
                 </strong>
               </div>
-              <div className="settings-note">
-                <Terminal size={19} />
-                <div>
-                  <strong>Easy for you. Easy for your agent.</strong>
-                  <p>
-                    Use the labelled controls or Cricket’s authenticated local
-                    command interface.
-                  </p>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      void link(
-                        "https://github.com/eddieyzhan/Cricket/blob/main/docs/AGENT.md",
-                      )
-                    }
-                  >
-                    Agent guide <ArrowUpRight size={13} />
-                  </button>
-                </div>
-              </div>
-              <p className="fine">
-                Closing the window keeps Cricket in your system tray to receive
-                notifications. Use the tray menu to quit.
-              </p>
+              <button
+                className="text-button settings-guide"
+                onClick={() =>
+                  void link(
+                    "https://github.com/eddieyzhan/Cricket/blob/main/docs/AGENT.md",
+                  )
+                }
+              >
+                Agent guide <ArrowUpRight size={13} />
+              </button>
               <button
                 className="secondary wide"
                 disabled={Boolean(busy) || state.jobs.length > 0}
@@ -1350,11 +1276,6 @@ export default function App() {
           <div className="chat-detail-avatar">
             <Avatar chat={chat} login={login} />
           </div>
-          <p className="muted">
-            {chat.members.length === 1
-              ? "Sign into the same GitHub account on another device. Your chat will appear automatically."
-              : "One chat, one private repository. Each person gets their own transfer and delivery receipt."}
-          </p>
           <div className="member-list">
             {chat.members.map((m) => (
               <div key={m}>
@@ -1369,13 +1290,12 @@ export default function App() {
             onClick={() => void link(`https://github.com/${chat.repo}`)}
           >
             <Github size={17} />
-            Open chat on GitHub
+            GitHub
             <ArrowUpRight size={14} />
           </button>
           <p className="fine">
-            Chat members can see filenames, transfer codes, and receipts. Files
-            themselves are never uploaded to GitHub. The sender stays online
-            while you receive.
+            Private metadata on GitHub. Files sent with croc. Keep both devices
+            online.
           </p>
         </Modal>
       )}

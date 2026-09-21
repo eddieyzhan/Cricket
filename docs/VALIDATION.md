@@ -1,6 +1,6 @@
 # Preview verification
 
-Version: **0.1.0**, September 2026. This is a working preview, not a claim of production readiness.
+Versions: **0.1.0 / 0.1.1**, September 2026. This is a working preview, not a claim of production readiness.
 
 ## Windows x64
 
@@ -25,3 +25,17 @@ This does **not** establish interactive GUI, credential-vault, notification, or 
 - Both endpoints must remain online. GitHub stores metadata and codes, not the shared file bytes.
 - Public croc relay outages can stop a transfer. The failed attempt remains in the history and can be retried.
 - Local source paths, credentials, test fixtures, and private chat metadata are excluded from the public repository.
+
+## 0.1.1 update
+
+The interface now defaults to 900 × 640, with a compact send bar, shorter labels, and expandable group receipts. Browser checks cover the 900 × 640 layout, the 720 × 520 minimum, saved-person selection, remembering a newly added username, removing a selection, group creation, send, retry, and settings. The inspected chat and new-chat dialog states pass axe's WCAG 2 A/AA and 2.1 AA checks.
+
+The saved-contact regression test loads an older state file without contacts, derives people from existing chats, excludes the current account and invalid usernames, deduplicates case-insensitively, and confirms persistence after saving/reloading. Local checks passed: 12 Rust tests, 5 frontend tests, TypeScript, and Clippy.
+
+### Public-data audit
+
+Reachable Git history and current project files were checked against private runtime identifiers, chat repository names, transfer codes, agent credentials, local home-directory paths, and credential patterns. No matching private data was found in the source/history. The screenshot uses fictional preview data. The repository owner's public GitHub identity and intentional examples remain visible.
+
+The old 0.1.0 Windows executable did contain local user-directory paths in build diagnostics and a development-only lookup. Its Windows installer and portable ZIP were removed from the release. Version 0.1.1 remaps build paths to generic locations and checks the uncompressed release executable before upload. Previously downloaded copies cannot be recalled. No credential or private chat-data exposure was found.
+
+`npm run audit:privacy` repeats the repository check. Pass an uncompressed executable path to `node tools/audit-public.mjs` to include its bytes in the scan. Automated scans reduce risk; they are not a proof that every possible kind of private information is absent.

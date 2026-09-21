@@ -36,6 +36,7 @@ pub struct Snapshot {
     pub device_id: String,
     pub device_name: String,
     pub chats: Vec<Chat>,
+    pub contacts: Vec<String>,
     pub transfers: Vec<TransferView>,
     pub jobs: Vec<JobView>,
     pub invitations: Vec<Invitation>,
@@ -128,6 +129,7 @@ impl Runtime {
             device_id: s.device_id.clone(),
             device_name: s.device_name.clone(),
             chats: s.chats.clone(),
+            contacts: s.contacts.clone(),
             transfers: s
                 .transfers
                 .iter()
@@ -242,6 +244,7 @@ impl Runtime {
             .await?;
         self.mutate(|s| {
             s.chats.push(chat.clone());
+            s.remember_contacts(&chat.members);
             Ok(())
         })?;
         if !warnings.is_empty() {
@@ -256,6 +259,7 @@ impl Runtime {
         self.mutate(|s| {
             s.chats.retain(|c| !c.repo.eq_ignore_ascii_case(&chat.repo));
             s.chats.push(chat.clone());
+            s.remember_contacts(&chat.members);
             Ok(())
         })?;
         self.changed();
@@ -276,6 +280,7 @@ impl Runtime {
             let found = api.discover(&login).await?;
             self.mutate(|s| {
                 for chat in found {
+                    s.remember_contacts(&chat.members);
                     s.chats.retain(|c| !c.repo.eq_ignore_ascii_case(&chat.repo));
                     s.chats.push(chat);
                 }

@@ -60,6 +60,7 @@ export interface Snapshot {
   device_id: string;
   device_name: string;
   chats: Chat[];
+  contacts: string[];
   transfers: Transfer[];
   jobs: Job[];
   invitations: Invitation[];
@@ -70,12 +71,12 @@ export interface Snapshot {
   oauth_available: boolean;
 }
 export const statusText: Record<Status, string> = {
-  waiting: "Waiting to receive",
+  waiting: "Waiting",
   seen: "Seen",
   receiving: "Receiving",
-  sent: "Sent · awaiting receipt",
+  sent: "Sent",
   received: "Received",
-  failed: "Retry needed",
+  failed: "Failed",
   cancelled: "Cancelled",
   retry_requested: "Retry requested",
   expired: "Timed out",
@@ -100,15 +101,22 @@ export function chatSummary(chat: Chat, state: Snapshot): string {
     .filter((t) => t.repo === chat.repo)
     .sort((a, b) => b.created_at - a.created_at);
   const latest = transfers[0];
-  if (!latest)
-    return chat.members.length === 1
-      ? "From here to your other devices"
-      : "Ready for your first file";
+  if (!latest) return chat.members.length === 1 ? "My devices" : "No files yet";
   if (latest.deliveries.some((d) => needsRetry(d.status)))
-    return "A transfer needs a retry";
+    return "Retry needed";
   if (latest.deliveries.every((d) => d.status === "received"))
     return `${latest.files.length} ${latest.files.length === 1 ? "item" : "items"} received`;
-  return incomingFor(latest, state)
-    ? "Files waiting for you"
-    : "Waiting for a receipt";
+  return incomingFor(latest, state) ? "Files waiting" : "Sent";
+}
+
+export function parseMembers(value: string): string[] {
+  return [
+    ...new Map(
+      value
+        .split(/[\s,]+/)
+        .map((s) => s.replace(/^@/, ""))
+        .filter(Boolean)
+        .map((s) => [s.toLowerCase(), s]),
+    ).values(),
+  ];
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Cricket",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "app.cricket.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -14,11 +14,11 @@
       {
         "label": "main",
         "title": "Cricket",
-        "width": 1120,
-        "height": 780,
-        "minWidth": 760,
-        "minHeight": 580,
-        "backgroundColor": "#f7f8f4"
+        "width": 900,
+        "height": 640,
+        "minWidth": 720,
+        "minHeight": 520,
+        "backgroundColor": "#ffffff"
       }
     ],
     "security": {
@@ -27,14 +27,22 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "app", "dmg", "appimage", "deb"],
+    "targets": [
+      "nsis",
+      "app",
+      "dmg",
+      "appimage",
+      "deb"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "resources": ["binaries/*"],
+    "resources": [
+      "binaries/*"
+    ],
     "shortDescription": "Files, a little closer.",
     "category": "Utility"
   }

@@ -71,3 +71,7 @@ No GitHub Actions, hosted Cricket server, database service, or webhook endpoint 
 - Provide explicit device targeting for accounts with several devices.
 - Explore optional offline storage using newer croc capabilities, with clear storage/trust/quota choices.
 - Add history archiving and more efficient synchronization for very large chats.
+
+## Saved people
+
+GitHub usernames from created, imported, and discovered chats are deduplicated and saved in the local account state. Existing chats populate saved people on upgrade. Contacts survive restarts and are cleared on disconnect. Only the selected members are included in a new private chat manifest; the saved-people list is never published.

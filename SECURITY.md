@@ -17,3 +17,9 @@ Repository and login inputs are constrained before constructing API paths. Wire 
 Local history contains metadata and saved source paths and must be treated as private. Unix files are created with `0600`; Windows relies on the user's application-data ACL. Local state is not additionally encrypted. File contents remain wherever the user selected them or downloaded them. Disconnect removes the stored GitHub credential and local chat history after active transfers/pending receipt writes are resolved; it does not delete GitHub repositories or downloaded files.
 
 There is no telemetry, analytics endpoint, automated paid infrastructure, or automatic updater in this preview. Code signing, OS-by-OS validation, and broader hostile-input testing remain necessary before a stable release.
+
+## Release privacy
+
+Build packages with `npm run tauri -- build`; the wrapper remaps developer home/project paths out of Rust diagnostics embedded in the binary, and release builds exclude development-only lookup paths. Do not publish unreviewed debug builds, PDBs, dumps, local state, or agent discovery files. Run `npm run audit:privacy` and scan the uncompressed executable before publishing. The workflow includes this check.
+
+Saved contacts are local account data. They are never committed to Cricket's public source repository or uploaded as a contact list. Disconnect clears them with the local chat state.

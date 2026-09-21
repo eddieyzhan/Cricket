@@ -4,10 +4,18 @@ import {
   needsRetry,
   sameUser,
   sizeLabel,
+  parseMembers,
   type Snapshot,
   type Transfer,
 } from "./types";
 describe("transfer presentation", () => {
+  it("deduplicates selected and typed GitHub recipients", () => {
+    expect(parseMembers("@Alice, bob ALICE,, @carol")).toEqual([
+      "ALICE",
+      "bob",
+      "carol",
+    ]);
+  });
   it("distinguishes another device on the same account from this sender", () => {
     const state = { device_id: "laptop", user: { login: "alice" } } as Snapshot;
     const transfer = {

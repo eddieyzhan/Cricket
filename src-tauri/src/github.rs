@@ -51,7 +51,7 @@ struct Comment {
 impl GitHub {
     pub fn new(token: String) -> Result<Self, String> {
         let client = Client::builder()
-            .user_agent("Cricket/0.1.0 (https://github.com/eddieyzhan/Cricket)")
+            .user_agent("Cricket/0.1.1 (https://github.com/eddieyzhan/Cricket)")
             .timeout(Duration::from_secs(30))
             .redirect(reqwest::redirect::Policy::none())
             .build()

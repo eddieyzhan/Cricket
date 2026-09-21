@@ -24,6 +24,8 @@ pub struct Store {
     pub device_name: String,
     pub user: Option<User>,
     pub chats: Vec<Chat>,
+    #[serde(default)]
+    pub contacts: Vec<String>,
     pub transfers: Vec<Transfer>,
     pub sources: HashMap<String, Vec<SourceFile>>,
     pub outbox: Vec<PendingEvent>,
@@ -44,6 +46,7 @@ impl Default for Store {
                 .collect(),
             user: None,
             chats: vec![],
+            contacts: vec![],
             transfers: vec![],
             sources: HashMap::new(),
             outbox: vec![],
@@ -53,7 +56,29 @@ impl Default for Store {
         }
     }
 }
+impl Store {
+    pub fn remember_contacts(&mut self, members: &[String]) {
+        for member in members {
+            let login = member.trim().trim_start_matches('@');
+            if valid_login(login)
+                && !self
+                    .user
+                    .as_ref()
+                    .is_some_and(|u| u.login.eq_ignore_ascii_case(login))
+                && !self.contacts.iter().any(|c| c.eq_ignore_ascii_case(login))
+            {
+                self.contacts.push(login.to_string());
+            }
+        }
+        self.contacts.sort_by_key(|c| c.to_ascii_lowercase());
+    }
+    pub fn remember_chat_contacts(&mut self) {
+        let members: Vec<_> = self.chats.iter().flat_map(|c| c.members.clone()).collect();
+        self.remember_contacts(&members);
+    }
+}
 pub fn recover(store: &mut Store) {
+    store.remember_chat_contacts();
     let Some(user) = &store.user else {
         return;
     };
@@ -220,6 +245,25 @@ pub async fn inspect(paths: Vec<String>) -> Result<Vec<SourceFile>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn saved_contacts_migrate_deduplicate_and_survive_restart() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut old = serde_json::to_value(Store::default()).unwrap();
+        old.as_object_mut().unwrap().remove("contacts");
+        old["user"] = serde_json::json!({"login":"alice","name":null});
+        old["chats"] = serde_json::json!([{"repo":"alice/cricket-example","name":"Group","members":["Alice","Bob","carol"]}]);
+        let mut store: Store = serde_json::from_value(old).unwrap();
+        recover(&mut store);
+        store.remember_contacts(&[
+            "BOB".into(),
+            "@dave".into(),
+            "alice".into(),
+            "bad/user".into(),
+        ]);
+        save(temp.path(), &store).unwrap();
+        let restored = load(temp.path()).unwrap();
+        assert_eq!(restored.contacts, vec!["Bob", "carol", "dave"]);
+    }
     #[test]
     fn folder_fingerprint_catches_changed_children_and_counts_bytes() {
         let temp = tempfile::tempdir().unwrap();

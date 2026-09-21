@@ -3,7 +3,7 @@
 <p align="center">Files, a little closer.</p>
 <p align="center">A small desktop app for sharing files with your other devices and your favourite people.<br/>Built with Tauri, powered by croc, with private GitHub chats and delivery receipts.</p>
 
-> **Early preview — 0.1.0.** Windows is the first locally tested build. The code targets Windows, Linux, and macOS; Linux and macOS builds still need native validation. No GitHub Actions workflows or paid services are required.
+> **Preview 0.1.1.** [Download for Windows, Linux, or Mac](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.1). A compact desktop app with saved people, private chats, and delivery receipts. [Verification details](docs/VALIDATION.md).
 
 ![Cricket's chat-style interface, showing a file history and a receive button with fictional preview data](docs/preview.png)
 
@@ -15,6 +15,7 @@ The other person gets a desktop notification, opens Cricket, and clicks **Receiv
 
 - **Files and folders.** Drag and drop, or use native file/folder pickers.
 - **My devices.** Sign into the same GitHub account on two computers and create a chat with no other members.
+- **Saved people.** Usernames from your chats are remembered on this device. Search and select them when starting another chat or group. They are cleared when you disconnect your account.
 - **People and groups.** Create a chat with GitHub usernames. Cricket creates a private repository and invites those people.
 - **Durable receipts.** Offers are GitHub issues; receipts and retry requests are append-only comments. Failed receipt writes wait in a local outbox.
 - **An actual small desktop app.** Tauri uses the operating system webview. React handles the interface; Rust owns credentials, networking, and processes. There is no bundled Chromium or Node runtime.
@@ -26,7 +27,7 @@ GitHub stores **filenames, sizes, participants, expiring croc codes, and receipt
 
 1. Install a build from [Releases](https://github.com/eddieyzhan/Cricket/releases), or build locally below.
 2. Connect GitHub. This preview can reuse an existing **GitHub CLI** login, or save an access token in your operating system's credential vault. A classic token with `repo` scope supports chat creation and invitations; this scope grants broad private-repository access.
-3. Click **New chat**, choose a name, and enter GitHub usernames separated by commas. Leave usernames empty for **My devices**.
+3. Click **New chat** and select saved people or add a GitHub username. Choose **My devices** with nobody selected. Group names are optional.
 4. Friends accept their invitation in Cricket or on GitHub, then refresh. The chat appears automatically on their devices.
 5. Choose that chat, add files, and click **Send**. The receiver chooses a download folder. Cricket creates a unique subfolder for each receive attempt, avoiding overwriting existing files.
 
@@ -60,6 +61,7 @@ npm run dev
 
 # Local checks
 npm run check
+npm run audit:privacy
 npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings

@@ -16,11 +16,14 @@ pub fn executable(resource_dir: &Path) -> PathBuf {
     if bundled.is_file() {
         return bundled;
     }
-    let development = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("binaries")
-        .join(name);
-    if cfg!(debug_assertions) && development.is_file() {
-        return development;
+    #[cfg(debug_assertions)]
+    {
+        let development = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("binaries")
+            .join(name);
+        if development.is_file() {
+            return development;
+        }
     }
     PathBuf::from(name)
 }

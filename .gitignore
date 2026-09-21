@@ -15,3 +15,8 @@ artifacts/
 src-tauri/gen/
 src-tauri/icons/android/
 src-tauri/icons/ios/
+state.json
+agent.json
+contacts.json
+*.pdb
+*.dmp
