@@ -11,7 +11,7 @@ on:
       release:
         description: Existing draft release tag to attach packages to
         type: string
-        default: v0.1.1
+        default: v0.1.2
         required: true
 
 # No push/PR/schedule trigger, cache uploads, or Actions artifact storage.

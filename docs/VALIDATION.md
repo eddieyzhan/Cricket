@@ -1,5 +1,51 @@
 # Preview verification
 
+## 0.1.2 relay fix (local Windows validation)
+
+Public-relay tests on September 22 reproduced a peer-handshake decoding failure
+(`flate: corrupt input before offset 6`) on relays 1 and 4 with the pinned croc
+11.5.3. The same fixture passed on relays 2 and 3. A successful local-relay test
+did not establish public-relay compatibility. These observations describe the
+relays at test time; they are not a permanent blocklist.
+
+Before publishing an offer, Cricket now tests an encrypted round trip of a small
+generated fixture through a candidate relay. It tries another candidate if the
+check fails. Real transfer codes are independently generated for a working relay,
+using croc's existing code-to-relay mapping, so older receivers can still receive.
+Retry starts with a different candidate from the previous attempt. Each check is
+bounded to 12 seconds and a send checks at most four candidates. Group recipients
+share the checked relay but each has an independent code.
+
+The sender needs this update; updating only the receiver cannot move an existing
+offer to another relay. A sender-side check also cannot establish that the
+recipient's network permits the connection or guarantee future relay availability.
+
+Both croc output streams are inspected for fixed error categories and discarded;
+raw output and transfer codes are never shown or persisted. The local failure
+explanation stays with its transfer attempt across sync and app restarts.
+
+Windows checks include the native public-relay preflight (starting at the failing
+relay and falling through to a working one), frontend checks/build, and an actual
+public-relay folder round trip with nested paths, spaces, Unicode filenames,
+binary data, and an empty directory. Received file hashes match. Network tests
+remain opt-in:
+
+```sh
+cargo test --manifest-path src-tauri/Cargo.toml public_relay_preflight -- --ignored
+node tools/test-croc.mjs --public-relay --relay-index 1 --folder
+```
+
+`--relay-index` uses zero-based indexes (1 selects public relay 2). Interactive
+Fedora-to-Windows verification requires the sender update and a fresh retry.
+
+The packaged Windows 0.1.2 app also passed actual native send and receive flows
+using a generated fixture through a public relay, exact content checks, and
+durable received receipts. Its authenticated API checks and executable privacy
+scan passed. Fourteen local Rust tests and five frontend tests passed; the
+network preflight test was run separately. Clippy passed with warnings denied.
+The Linux release uses one manual standard public-runner packaging job, with
+native tests and a local-relay round trip; no Mac rebuild is part of this update.
+
 Versions: **0.1.0 / 0.1.1**, September 2026. This is a working preview, not a claim of production readiness.
 
 ## Windows x64

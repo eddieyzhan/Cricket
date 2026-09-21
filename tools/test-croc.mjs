@@ -1,8 +1,15 @@
 // A real round trip through Cricket's pinned croc binary. Local relay by default;
 // --public-relay opts into sending a generated test fixture via croc's public relay.
 import { spawn } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  writeFile,
+  rm,
+  stat,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,7 +80,38 @@ try {
   const output = join(temp, "received");
   await mkdir(output);
   await writeFile(input, "Cricket round-trip verification. 🦗\n".repeat(2500));
-  secret = `${randomUUID()}-${randomUUID()}`;
+  const folderTest = process.argv.includes("--folder");
+  const sendFolder = join(temp, "folder with spaces");
+  if (folderTest) {
+    await mkdir(join(sendFolder, "nested"), { recursive: true });
+    await mkdir(join(sendFolder, "empty"));
+    await writeFile(
+      join(sendFolder, "nested", "unicode-🦗.txt"),
+      await readFile(input),
+    );
+    await writeFile(
+      join(sendFolder, "random.bin"),
+      randomBytes(2 * 1024 * 1024),
+    );
+  }
+  const relayIndexArg = process.argv.indexOf("--relay-index");
+  const relayIndex =
+    relayIndexArg < 0 ? null : Number(process.argv[relayIndexArg + 1]);
+  if (
+    relayIndex !== null &&
+    (!Number.isInteger(relayIndex) || relayIndex < 0 || relayIndex > 3)
+  )
+    throw new Error("--relay-index must be 0, 1, 2, or 3");
+  do {
+    secret = `${randomUUID()}-${randomUUID()}`;
+  } while (
+    relayIndex !== null &&
+    createHash("sha256").update(secret).digest()[31] % 4 !== relayIndex
+  );
+  if (publicRelay)
+    console.log(
+      `Testing public relay ${(createHash("sha256").update(secret).digest()[31] % 4) + 1}.`,
+    );
   const env = {
     CROC_SECRET: secret,
     ...(publicRelay
@@ -82,7 +120,15 @@ try {
   };
   const flags = ["--yes", "--disable-clipboard", "--ignore-stdin"];
   const sender = launch(
-    [...flags, "send", "--transport", "relay", "--no-local", "--", input],
+    [
+      ...flags,
+      "send",
+      "--transport",
+      "relay",
+      "--no-local",
+      "--",
+      folderTest ? sendFolder : input,
+    ],
     env,
   );
   await new Promise((r) => setTimeout(r, 1000));
@@ -105,12 +151,25 @@ try {
     createHash("sha256")
       .update(await readFile(file))
       .digest("hex");
-  if (
+  if (folderTest) {
+    for (const file of [join("nested", "unicode-🦗.txt"), "random.bin"]) {
+      if (
+        (await hash(join(sendFolder, file))) !==
+        (await hash(join(output, "folder with spaces", file)))
+      )
+        throw new Error("Received folder content does not match");
+    }
+    if (
+      !(await stat(join(output, "folder with spaces", "empty"))).isDirectory()
+    )
+      throw new Error("Empty folder was not received");
+  } else if (
     (await hash(input)) !== (await hash(join(output, "a file with spaces.txt")))
-  )
+  ) {
     throw new Error("Received file content does not match");
+  }
   console.log(
-    `PASS: real croc send + receive, spaced filename, UTF-8 content, SHA-256 equality, ${publicRelay ? "public relay" : "local relay only"}.`,
+    `PASS: real croc send + receive, ${folderTest ? "nested folder, empty folder, Unicode filename, binary content" : "spaced filename, UTF-8 content"}, SHA-256 equality, ${publicRelay ? "public relay" : "local relay only"}.`,
   );
 } catch (error) {
   console.error(error.message);

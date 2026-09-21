@@ -3,7 +3,7 @@
 <p align="center">Files, a little closer.</p>
 <p align="center">A small desktop app for sharing files with your other devices and your favourite people.<br/>Built with Tauri, powered by croc, with private GitHub chats and delivery receipts.</p>
 
-> **Preview 0.1.1.** [Download for Windows, Linux, or Mac](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.1). A compact desktop app with saved people, private chats, and delivery receipts. [Verification details](docs/VALIDATION.md).
+> **Preview 0.1.2.** [Download for Windows or Linux](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.2). Includes public-relay checks and clearer transfer failures. [Mac preview 0.1.1](https://github.com/eddieyzhan/Cricket/releases/tag/v0.1.1) · [Verification details](docs/VALIDATION.md).
 
 ![Cricket's chat-style interface, showing a file history and a receive button with fictional preview data](docs/preview.png)
 
@@ -38,6 +38,13 @@ The pinned croc **11.5.3** executable is included in packaged builds. You do not
 Notifications are polled: normally every 30 seconds while the window is visible, 90 seconds in the tray, and 120 seconds after a sync error. Chat discovery runs every five minutes or immediately on manual refresh. OS notification settings still apply.
 
 ### When something stops
+
+Version 0.1.2 checks a small encrypted round trip before choosing a public
+relay, avoiding reachable relays whose transfer handshake fails. Update the
+**sending device** and retry there; existing receivers understand the new offer.
+Preparing a send can take several seconds while relay candidates are checked.
+Failures retain a specific explanation in the chat, without exposing croc output
+or transfer codes. See [validation](docs/VALIDATION.md) for the reproduced failure.
 
 The transfer stays in the chat. A recipient can **Ask to resend**, and the original sending device can **Retry**. Retrying generates a new secret and attempt number; old receipts cannot complete the new attempt. Already received recipients are never automatically resent files. Changed or missing source files must be selected as a new transfer. Folder retries check the included paths, sizes, and modification times.
 

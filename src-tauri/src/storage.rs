@@ -33,6 +33,8 @@ pub struct Store {
     pub last_sync: Option<u64>,
     #[serde(default)]
     pub inflight: Vec<Inflight>,
+    #[serde(default)]
+    pub transfer_errors: HashMap<String, String>,
 }
 impl Default for Store {
     fn default() -> Self {
@@ -53,6 +55,7 @@ impl Default for Store {
             notified: HashSet::new(),
             last_sync: None,
             inflight: vec![],
+            transfer_errors: HashMap::new(),
         }
     }
 }
@@ -250,9 +253,11 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let mut old = serde_json::to_value(Store::default()).unwrap();
         old.as_object_mut().unwrap().remove("contacts");
+        old.as_object_mut().unwrap().remove("transfer_errors");
         old["user"] = serde_json::json!({"login":"alice","name":null});
         old["chats"] = serde_json::json!([{"repo":"alice/cricket-example","name":"Group","members":["Alice","Bob","carol"]}]);
         let mut store: Store = serde_json::from_value(old).unwrap();
+        assert!(store.transfer_errors.is_empty());
         recover(&mut store);
         store.remember_contacts(&[
             "BOB".into(),
@@ -295,9 +300,17 @@ mod tests {
     #[test]
     fn atomic_state_roundtrip_retains_device_identity() {
         let temp = tempfile::tempdir().unwrap();
-        let store = Store::default();
+        let mut store = Store::default();
+        store.transfer_errors.insert(
+            "alice/example#1:bob:2".into(),
+            "Relay handshake failed.".into(),
+        );
         save(temp.path(), &store).unwrap();
         assert_eq!(load(temp.path()).unwrap().device_id, store.device_id);
+        assert_eq!(
+            load(temp.path()).unwrap().transfer_errors,
+            store.transfer_errors
+        );
         save(temp.path(), &store).unwrap();
         assert_eq!(load(temp.path()).unwrap().device_id, store.device_id);
     }

@@ -42,6 +42,7 @@ export interface Transfer {
   files: SharedFile[];
   deliveries: Delivery[];
   can_retry: boolean;
+  error?: string | null;
 }
 export interface Job {
   id: string;

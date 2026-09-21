@@ -272,6 +272,7 @@ pub struct TransferView {
     pub files: Vec<SharedFile>,
     pub deliveries: Vec<Delivery>,
     pub can_retry: bool,
+    pub error: Option<String>,
 }
 impl TransferView {
     pub fn new(t: &Transfer, device: &str, has_source: bool) -> Self {
@@ -286,6 +287,7 @@ impl TransferView {
             files: t.offer.files.clone(),
             deliveries: t.deliveries(now()),
             can_retry: t.offer.source_device == device && has_source,
+            error: None,
         }
     }
 }

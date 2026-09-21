@@ -133,7 +133,31 @@ impl Runtime {
             transfers: s
                 .transfers
                 .iter()
-                .map(|t| TransferView::new(t, &s.device_id, s.sources.contains_key(&t.key())))
+                .map(|t| {
+                    let mut view =
+                        TransferView::new(t, &s.device_id, s.sources.contains_key(&t.key()));
+                    view.error = view.deliveries.iter().find_map(|d| {
+                        if matches!(
+                            d.status,
+                            Status::Received
+                                | Status::Sent
+                                | Status::Waiting
+                                | Status::Seen
+                                | Status::Receiving
+                        ) {
+                            return None;
+                        }
+                        s.transfer_errors
+                            .get(&format!(
+                                "{}:{}:{}",
+                                t.key(),
+                                d.recipient.to_lowercase(),
+                                d.attempt
+                            ))
+                            .cloned()
+                    });
+                    view
+                })
                 .collect(),
             jobs: self
                 .jobs
@@ -489,6 +513,14 @@ impl Runtime {
             let s = self.store.lock().unwrap();
             (s.device_id.clone(), s.device_name.clone())
         };
+        let checked_code = croc::new_code(&self.binary, None).await?;
+        let slots = recipients
+            .into_iter()
+            .map(|recipient| Slot {
+                recipient,
+                code: croc::code_on_same_relay(&checked_code),
+            })
+            .collect();
         let created_at = now();
         let offer = Offer {
             id: id(),
@@ -498,13 +530,7 @@ impl Runtime {
             created_at,
             expires_at: created_at + TRANSFER_TTL,
             files: files.iter().map(|f| f.file.clone()).collect(),
-            slots: recipients
-                .into_iter()
-                .map(|recipient| Slot {
-                    recipient,
-                    code: format!("{}-{}", id(), id()),
-                })
-                .collect(),
+            slots,
         };
         let issue = api.offer(&repo, &offer).await?;
         let transfer = Transfer {
@@ -549,6 +575,8 @@ impl Runtime {
             }
             drop(jobs);
             self.mutate(|s| {
+                s.transfer_errors
+                    .remove(&format!("{}:{}", job_id, delivery.attempt));
                 s.inflight.push(storage::Inflight {
                     key: key.clone(),
                     recipient: delivery.recipient.clone(),
@@ -598,6 +626,12 @@ impl Runtime {
                 runtime.problem(format!("Couldn't save the delivery receipt: {error}"));
             }
             if let Err(error) = runtime.mutate(|s| {
+                let error_key = format!("{}:{}", job_id, delivery.attempt);
+                if let Err(error) = &result {
+                    s.transfer_errors.insert(error_key, error.clone());
+                } else {
+                    s.transfer_errors.remove(&error_key);
+                }
                 s.inflight.retain(|j| {
                     !(j.key == t.key()
                         && j.recipient == delivery.recipient
@@ -720,7 +754,7 @@ impl Runtime {
             return Err("A source changed. Reselect the files and send a new transfer so the recipient gets an accurate manifest.".into());
         }
         delivery.attempt += 1;
-        delivery.code = format!("{}-{}", id(), id());
+        delivery.code = croc::new_code(&self.binary, Some(&delivery.code)).await?;
         delivery.expires_at = now() + TRANSFER_TTL;
         let mut event = Self::event(&recipient, delivery.attempt, Status::Waiting);
         event.code = Some(delivery.code.clone());

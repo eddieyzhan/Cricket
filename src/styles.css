@@ -454,6 +454,13 @@ input:focus {
 .transfer-receipt.complete {
   color: #487052;
 }
+.transfer-error {
+  margin: 6px 3px 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #93600f;
+  overflow-wrap: anywhere;
+}
 .amber {
   color: #93600f !important;
 }

@@ -1,6 +1,6 @@
 [package]
 name = "cricket"
-version = "0.1.1"
+version = "0.1.2"
 description = "A little closer. File sharing with croc."
 authors = ["Cricket contributors"]
 edition = "2021"
@@ -32,6 +32,7 @@ tempfile = "3"
 hostname = "0.4"
 walkdir = "2"
 dunce = "1"
+sha2 = "0.10"
 
 [profile.release]
 codegen-units = 1

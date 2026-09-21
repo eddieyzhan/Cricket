@@ -923,6 +923,15 @@ export default function App() {
                             ))}
                           </div>
                         )}
+                        {t.error && retry && (
+                          <p
+                            className="transfer-error"
+                            role="status"
+                            data-testid={`transfer-error-${t.issue}`}
+                          >
+                            {t.error}
+                          </p>
+                        )}
                       </article>
                     </div>
                   );
@@ -1005,7 +1014,7 @@ export default function App() {
                     ) : (
                       <Send size={16} />
                     )}
-                    Send
+                    {busy === "send" ? "Preparing…" : "Send"}
                     {queued.length > 0 && (
                       <span className="send-count">{queued.length}</span>
                     )}
