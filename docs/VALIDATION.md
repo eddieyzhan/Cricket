@@ -32,10 +32,12 @@ The interface now defaults to 900 × 640, with a compact send bar, shorter label
 
 The saved-contact regression test loads an older state file without contacts, derives people from existing chats, excludes the current account and invalid usernames, deduplicates case-insensitively, and confirms persistence after saving/reloading. Local checks passed: 12 Rust tests, 5 frontend tests, TypeScript, and Clippy.
 
+The [0.1.1 packaging run](https://github.com/eddieyzhan/Cricket/actions/runs/35652571107) repeats the croc round trip, 11 native tests, and package builds on Linux and both Mac architectures, and adds an executable privacy scan before uploading each platform's packages.
+
 ### Public-data audit
 
 Reachable Git history and current project files were checked against private runtime identifiers, chat repository names, transfer codes, agent credentials, local home-directory paths, and credential patterns. No matching private data was found in the source/history. The screenshot uses fictional preview data. The repository owner's public GitHub identity and intentional examples remain visible.
 
-The old 0.1.0 Windows executable did contain local user-directory paths in build diagnostics and a development-only lookup. Its Windows installer and portable ZIP were removed from the release. Version 0.1.1 remaps build paths to generic locations and checks the uncompressed release executable before upload. Previously downloaded copies cannot be recalled. No credential or private chat-data exposure was found.
+The old 0.1.0 Windows executable did contain local user-directory paths in build diagnostics and a development-only lookup. Its Windows installer and portable ZIP were removed from the release. Version 0.1.1 remaps build paths to generic locations and checks the uncompressed release executable before upload. The Windows installer and portable ZIP were also extracted and their contents scanned; both passed. The installed executable matches the audited portable build apart from Tauri's expected installer marker. Previously downloaded copies cannot be recalled. No credential or private chat-data exposure was found.
 
 `npm run audit:privacy` repeats the repository check. Pass an uncompressed executable path to `node tools/audit-public.mjs` to include its bytes in the scan. Automated scans reduce risk; they are not a proof that every possible kind of private information is absent.
