@@ -7,7 +7,9 @@ on:
         required: true
         default: v0.1.3
 permissions:
-  contents: read
+  # GitHub hides draft releases from tokens without repository write permission.
+  # This workflow only downloads the existing package; it never publishes.
+  contents: write
 jobs:
   verify:
     if: github.event.repository.private == false
