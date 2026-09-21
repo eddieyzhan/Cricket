@@ -37,6 +37,8 @@ const files = (await readdir(dmgs)).filter(
 assert.equal(files.length, 1);
 let mounted = false;
 let app;
+let lastFailure = "agent discovery file not found";
+let appOutput = "";
 try {
   await mkdir(mount);
   execFileSync(
@@ -64,14 +66,22 @@ try {
   );
   app = spawn(join(relocated, "Contents/MacOS/cricket"), [], {
     cwd: temp,
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   });
-  app.on("error", () => {});
+  app.on("error", (error) => {
+    lastFailure = `spawn: ${error.code}`;
+  });
+  for (const stream of [app.stdout, app.stderr])
+    stream.on("data", (chunk) => {
+      appOutput = (appOutput + chunk).slice(-8000);
+    });
   const agentFile = join(data, "agent.json");
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {
-    if (app.exitCode !== null)
-      throw new Error("Packaged app exited before startup");
+    if (app.exitCode !== null || app.signalCode !== null)
+      throw new Error(
+        `Packaged app exited before startup: exit=${app.exitCode}, signal=${app.signalCode}`,
+      );
     try {
       const agent = JSON.parse(await readFile(agentFile, "utf8"));
       assert.equal(agent.pid, app.pid);
@@ -79,14 +89,17 @@ try {
         headers: { Authorization: `Bearer ${agent.token}` },
         signal: AbortSignal.timeout(2000),
       }).then((r) => r.json());
+      lastFailure = `API responded; croc discovered=${Boolean(state.croc_version)}; error=${state.error || "none"}`;
       if (state.croc_version?.includes("11.5.3")) {
         ready = true;
         break;
       }
-    } catch {}
+    } catch (error) {
+      lastFailure = `${error.name}: ${error.code || error.message}`;
+    }
     await new Promise((r) => setTimeout(r, 500));
   }
-  assert(ready, "Packaged app did not discover its bundled croc");
+  assert(ready, `Packaged app not ready: ${lastFailure}`);
   execFileSync(process.execPath, [join(root, "tools/test-agent.mjs")], {
     env: { ...process.env, CRICKET_AGENT_FILE: agentFile },
     stdio: "inherit",
@@ -112,6 +125,19 @@ try {
   console.log(
     "PASS: relocated DMG app startup, bundled croc, native authenticated API.",
   );
+} catch (error) {
+  // Fresh unauthenticated CI app only: never dump state or the agent bearer token.
+  console.error(`Startup diagnostic: ${lastFailure}`);
+  console.error(appOutput);
+  try {
+    console.error(
+      execFileSync("sample", [String(app.pid), "1"], {
+        encoding: "utf8",
+        timeout: 10000,
+      }).slice(0, 12000),
+    );
+  } catch {}
+  throw error;
 } finally {
   if (app && app.exitCode === null) {
     app.kill();
