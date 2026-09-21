@@ -513,12 +513,11 @@ impl Runtime {
             let s = self.store.lock().unwrap();
             (s.device_id.clone(), s.device_name.clone())
         };
-        let checked_code = croc::new_code(&self.binary, None).await?;
         let slots = recipients
             .into_iter()
             .map(|recipient| Slot {
                 recipient,
-                code: croc::code_on_same_relay(&checked_code),
+                code: croc::new_code(),
             })
             .collect();
         let created_at = now();
@@ -754,7 +753,7 @@ impl Runtime {
             return Err("A source changed. Reselect the files and send a new transfer so the recipient gets an accurate manifest.".into());
         }
         delivery.attempt += 1;
-        delivery.code = croc::new_code(&self.binary, Some(&delivery.code)).await?;
+        delivery.code = croc::new_code();
         delivery.expires_at = now() + TRANSFER_TTL;
         let mut event = Self::event(&recipient, delivery.attempt, Status::Waiting);
         event.code = Some(delivery.code.clone());

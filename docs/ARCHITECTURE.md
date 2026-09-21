@@ -6,7 +6,7 @@ flowchart LR
   B --> C[OS credential vault]
   B --> D[Private GitHub chat repository]
   B --> E[croc sender]
-  E <-->|Encrypted file data via relay| F[croc receiver]
+  E <-->|Encrypted file data via croc automatic transport| F[croc receiver]
   F --> G[Recipient's download folder]
   H[Recipient's Rust service] --> D
   H --> F

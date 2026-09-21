@@ -1,4 +1,3 @@
-use sha2::{Digest, Sha256};
 use std::{
     path::{Path, PathBuf},
     process::Stdio,
@@ -10,96 +9,10 @@ use tokio::{
     sync::oneshot,
 };
 
-// croc 11.5.3 maps the SHA-256 of the complete code to its four public relays.
-// Keep this mapping in sync with the pinned engine's codephrase.RelayIndex.
-fn relay_index(code: &str) -> usize {
-    usize::from(Sha256::digest(code.as_bytes())[31] % 4)
-}
-
-fn code_for_relay(index: usize) -> String {
-    loop {
-        let code = format!("{}-{}", crate::model::id(), crate::model::id());
-        if relay_index(&code) == index {
-            return code;
-        }
-    }
-}
-
-pub fn code_on_same_relay(checked_code: &str) -> String {
-    code_for_relay(relay_index(checked_code))
-}
-
-/// Check a real encrypted round trip before publishing an offer. A TCP ping is
-/// insufficient: some reachable public relays fail croc's peer handshake.
-/// The probe sends only a generated fixture back to this device, never user files.
-pub async fn new_code(binary: &Path, previous: Option<&str>) -> Result<String, String> {
-    let first = previous
-        .map(|code| (relay_index(code) + 1) % 4)
-        .unwrap_or_else(|| relay_index(&crate::model::id()));
-    for offset in 0..4 {
-        let index = (first + offset) % 4;
-        let probe = code_for_relay(index);
-        if probe_relay(binary, probe).await.is_ok() {
-            // Never reuse a probe's room or bearer code for the real transfer.
-            return Ok(code_for_relay(index));
-        }
-    }
-    Err("No compatible transfer relay is available. Check your connection and try sending again. No new transfer was started.".into())
-}
-
-async fn probe_relay(binary: &Path, code: String) -> Result<(), String> {
-    let temp = tempfile::tempdir().map_err(|_| "Couldn't prepare a relay check.")?;
-    let root = dunce::canonicalize(temp.path()).map_err(|_| "Couldn't prepare a relay check.")?;
-    let input = root.join("relay-check.txt");
-    let output = root.join("received");
-    const CONTENT: &[u8] = b"Cricket relay connectivity check.\n";
-    std::fs::write(&input, CONTENT).map_err(|_| "Couldn't prepare a relay check.")?;
-    std::fs::create_dir(&output).map_err(|_| "Couldn't prepare a relay check.")?;
-    let (sender_cancel, sender_rx) = oneshot::channel();
-    let (receiver_cancel, receiver_rx) = oneshot::channel();
-    let deadline = crate::model::now() + 10;
-    let sender = run(
-        binary.to_path_buf(),
-        code.clone(),
-        Direction::Send(vec![input.to_string_lossy().into_owned()]),
-        deadline,
-        sender_rx,
-    );
-    let receiver = async {
-        tokio::time::sleep(Duration::from_millis(250)).await;
-        run(
-            binary.to_path_buf(),
-            code,
-            Direction::Receive(output.clone()),
-            deadline,
-            receiver_rx,
-        )
-        .await
-    };
-    // Bound the entire probe, including after a progress marker. Wait for both
-    // child processes to exit before the temporary directory is removed.
-    let transfers = async { tokio::join!(sender, receiver) };
-    tokio::pin!(transfers);
-    let result = tokio::select! {
-        result = &mut transfers => result,
-        _ = tokio::time::sleep(Duration::from_secs(12)) => {
-            let _ = sender_cancel.send(());
-            let _ = receiver_cancel.send(());
-            transfers.await
-        }
-    };
-    match result {
-        (Ok(()), Ok(())) => {}
-        _ => return Err("Relay connectivity check failed.".into()),
-    }
-    if std::fs::read(output.join("relay-check.txt"))
-        .ok()
-        .as_deref()
-        != Some(CONTENT)
-    {
-        return Err("Relay connectivity check failed.".into());
-    }
-    Ok(())
+/// Generate an independent bearer code without requiring an internet relay.
+/// Connection discovery and transport selection belong to croc.
+pub fn new_code() -> String {
+    format!("{}-{}", crate::model::id(), crate::model::id())
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -137,7 +50,7 @@ impl Failure {
 
     fn message(self) -> String {
         match self {
-            Self::Protocol => "The relay could not complete the transfer handshake. Update Cricket on the sending device, then retry there to select a working relay.",
+            Self::Protocol => "croc could not complete the transfer handshake. Update Cricket on both devices, then retry from the sending device with a fresh connection code.",
             Self::Connection => "Could not connect to the sender or transfer relay. Keep both devices online and retry from the sending device.",
             Self::Filesystem => "croc could not read or write a file. Check folder permissions, available disk space, and filenames supported by the receiving device.",
             Self::Unknown => "The transfer stopped before it finished. Check that both devices are online, then retry.",
@@ -230,13 +143,7 @@ pub enum Direction {
     Send(Vec<String>),
     Receive(PathBuf),
 }
-pub async fn run(
-    binary: PathBuf,
-    code: String,
-    direction: Direction,
-    deadline: u64,
-    cancel: oneshot::Receiver<()>,
-) -> Result<(), String> {
+fn transfer_command(binary: &Path, code: &str, direction: Direction) -> Command {
     let mut command = Command::new(binary);
     hidden(&mut command);
     // The bearer secret is never placed in the process arguments or clipboard.
@@ -250,13 +157,37 @@ pub async fn run(
     match direction {
         Direction::Send(paths) => {
             command
-                .args(["send", "--transport", "relay", "--no-local", "--"])
+                // Leave transport and local discovery at croc's normal defaults.
+                .args(["send", "--"])
                 .args(paths);
         }
         Direction::Receive(folder) => {
             command.arg("--out").arg(folder);
         }
     }
+    command
+}
+
+pub async fn run(
+    binary: PathBuf,
+    code: String,
+    direction: Direction,
+    deadline: u64,
+    cancel: oneshot::Receiver<()>,
+) -> Result<(), String> {
+    run_command(
+        transfer_command(&binary, &code, direction),
+        deadline,
+        cancel,
+    )
+    .await
+}
+
+async fn run_command(
+    mut command: Command,
+    deadline: u64,
+    cancel: oneshot::Receiver<()>,
+) -> Result<(), String> {
     let mut child = command.spawn().map_err(|_| {
         "Could not start croc. Check that it is installed and executable.".to_string()
     })?;
@@ -308,11 +239,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn codes_select_the_requested_public_relay() {
-        for index in 0..4 {
-            let code = code_for_relay(index);
-            assert!(crate::model::valid_code(&code));
-            assert!(relay_index(&code) == index);
+    fn codes_are_valid_and_independent() {
+        let first = new_code();
+        let second = new_code();
+        assert!(crate::model::valid_code(&first));
+        assert!(crate::model::valid_code(&second));
+        assert!(first != second);
+    }
+
+    #[test]
+    fn commands_preserve_croc_connection_defaults_and_secret_privacy() {
+        let binary = Path::new("croc");
+        for (direction, expected) in [
+            (
+                Direction::Send(vec!["a folder/file.txt".into(), "--literal.txt".into()]),
+                vec![
+                    "--yes",
+                    "--disable-clipboard",
+                    "--ignore-stdin",
+                    "send",
+                    "--",
+                    "a folder/file.txt",
+                    "--literal.txt",
+                ],
+            ),
+            (
+                Direction::Receive(PathBuf::from("output folder")),
+                vec![
+                    "--yes",
+                    "--disable-clipboard",
+                    "--ignore-stdin",
+                    "--out",
+                    "output folder",
+                ],
+            ),
+        ] {
+            let command = transfer_command(binary, "test-secret", direction);
+            let args: Vec<_> = command.as_std().get_args().collect();
+            assert_eq!(args, expected);
+            assert!(command
+                .as_std()
+                .get_envs()
+                .any(|(key, value)| key == "CROC_SECRET"
+                    && value == Some(std::ffi::OsStr::new("test-secret"))));
         }
     }
 
@@ -333,16 +302,83 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires the prepared croc binary and network; run explicitly"]
-    async fn public_relay_preflight() {
+    #[ignore = "requires the prepared croc binary and loopback sockets; run explicitly"]
+    async fn native_default_transfer() {
         let name = if cfg!(windows) { "croc.exe" } else { "croc" };
-        let binary = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("binaries")
-            .join(name);
-        // Start at relay 1, which reproduced the compatibility failure. The
-        // check must continue to another relay when the first fails.
-        let previous = code_for_relay(3);
-        let code = new_code(&binary, Some(&previous)).await.unwrap();
-        probe_relay(&binary, code).await.unwrap();
+        // Cargo runs unit tests in the package directory, including remapped builds.
+        let binary = std::env::current_dir().unwrap().join("binaries").join(name);
+        let sockets: Vec<_> = (0..5)
+            .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())
+            .collect();
+        let port = sockets[0].local_addr().unwrap().port();
+        let ports = sockets
+            .iter()
+            .map(|s| s.local_addr().unwrap().port().to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        drop(sockets);
+        let mut relay =
+            hidden(Command::new(&binary).args(["relay", "--host", "127.0.0.1", "--ports", &ports]))
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .kill_on_drop(true)
+                .spawn()
+                .unwrap();
+        let address = format!("127.0.0.1:{port}");
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if tokio::net::TcpStream::connect(&address).await.is_ok() {
+                    break;
+                }
+                assert!(relay.try_wait().unwrap().is_none(), "fixture relay exited");
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(temp.path()).unwrap();
+        let input = root.join("a folder with spaces");
+        let output = root.join("received");
+        std::fs::create_dir_all(input.join("empty")).unwrap();
+        std::fs::create_dir_all(input.join("nested")).unwrap();
+        std::fs::create_dir(&output).unwrap();
+        let content = b"Cricket native automatic transport fixture.\n".repeat(4096);
+        std::fs::write(input.join("nested").join("unicode-🦗.txt"), &content).unwrap();
+        let code = new_code();
+        let (_sender_cancel, sender_rx) = oneshot::channel();
+        let (_receiver_cancel, receiver_rx) = oneshot::channel();
+        let deadline = crate::model::now() + 40;
+        let mut send_command = transfer_command(
+            &binary,
+            &code,
+            Direction::Send(vec![input.to_string_lossy().into_owned()]),
+        );
+        send_command
+            .env("CROC_RELAY", &address)
+            .env("CROC_RELAY6", &address);
+        let sender = run_command(send_command, deadline, sender_rx);
+        let receiver = async {
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            let mut receive_command =
+                transfer_command(&binary, &code, Direction::Receive(output.clone()));
+            receive_command
+                .env("CROC_RELAY", &address)
+                .env("CROC_RELAY6", &address);
+            run_command(receive_command, deadline, receiver_rx).await
+        };
+        let result = tokio::time::timeout(Duration::from_secs(50), async {
+            tokio::join!(sender, receiver)
+        })
+        .await
+        .unwrap();
+        relay.kill().await.unwrap();
+        assert!(result.0.is_ok(), "sender: {:?}", result.0);
+        assert!(result.1.is_ok(), "receiver: {:?}", result.1);
+        assert_eq!(
+            std::fs::read(output.join("a folder with spaces/nested/unicode-🦗.txt")).unwrap(),
+            content
+        );
+        assert!(output.join("a folder with spaces/empty").is_dir());
     }
 }

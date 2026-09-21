@@ -1,6 +1,32 @@
 # Preview verification
 
-## 0.1.2 relay fix (local Windows validation)
+## 0.1.3 normal croc connection selection
+
+The sender now runs `croc --yes --disable-clipboard --ignore-stdin send -- <paths>`.
+The receiver retains croc's normal defaults. Cricket no longer supplies
+`--transport relay` or `--no-local`, maps codes to particular public relays, or
+requires a successful public-relay preflight before sending. Fresh independent
+codes remain environment-only, including retries and group deliveries.
+
+Windows local checks: frontend tests/build, native unit tests, clippy, a real
+native-backend nested-folder round trip using normal transport selection and an
+isolated loopback rendezvous, plus a separate explicit relay-fallback round trip.
+Tests check spaces, Unicode filenames, empty folders and exact content equality.
+Command regression tests protect both automatic defaults and secret handling.
+
+The manual CI workflows run the same native tests and package for Linux and Mac.
+Codemagic is limited to one manually requested Apple Silicon run with a 20-minute
+cap; Linux and Intel Mac use free public GitHub runners. Build results are linked
+in the release notes. Mac package checks start the actual DMG app after relocating
+it outside the checkout and verify bundled croc discovery and the authenticated API.
+
+These same-host checks do not prove two-device LAN discovery, WAN traversal, or
+Fedora KDE desktop integration. A same-host test with deliberately unreachable
+rendezvous did not connect; we do not claim offline operation or guaranteed LAN
+routing. GitHub chat coordination still needs internet. Public relay failures
+observed in 0.1.2 can still affect croc when no alternate route is available.
+
+## 0.1.2 relay fix (historical; preflight removed in 0.1.3)
 
 Public-relay tests on September 22 reproduced a peer-handshake decoding failure
 (`flate: corrupt input before offset 6`) on relays 1 and 4 with the pinned croc

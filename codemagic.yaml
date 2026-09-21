@@ -1,0 +1,38 @@
+# Manual only. Check remaining FREE minutes before starting; never enable billing.
+workflows:
+  mac-arm64-handoff:
+    name: Cricket Apple Silicon test and package
+    instance_type: mac_mini_m2
+    max_build_duration: 20
+    environment:
+      xcode: "16.4"
+      node: "24.19.0"
+      npm: "11.17.0"
+    scripts:
+      - name: Verify host and install locked dependencies
+        script: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          npm ci --no-audit --no-fund
+          npm run prepare:croc
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          fi
+          source "$HOME/.cargo/env"
+          rustup default stable
+      - name: Native core and automatic folder transfer tests
+        script: |
+          set -euo pipefail
+          source "$HOME/.cargo/env"
+          node tools/native.mjs cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib -- --include-ignored
+          node tools/test-croc.mjs --folder --force-relay
+      - name: Build once and verify packaged resources
+        script: |
+          set -euo pipefail
+          source "$HOME/.cargo/env"
+          npm run tauri -- build
+          node tools/audit-public.mjs src-tauri/target/release/cricket
+          node tools/test-macos-package.mjs
+    artifacts:
+      - src-tauri/target/release/bundle/dmg/*.dmg
+      - artifacts/macos-validation.json

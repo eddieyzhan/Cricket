@@ -30,6 +30,9 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 node tools/test-croc.mjs
+node tools/test-croc.mjs --folder --force-relay
+# Explicit integration test using the actual native process wrapper:
+cargo test --manifest-path src-tauri/Cargo.toml --lib native_default_transfer -- --ignored
 
 # Package on the current platform
 npm run tauri -- build
@@ -40,6 +43,16 @@ npm run tauri -- build --bundles nsis
 The browser preview is explicitly labelled and uses fictional data. Native builds start with GitHub setup and use the real backend.
 
 The optional packaging workflow is **manual only**. It refuses to run in private repositories, uses standard public runners, and uploads packages directly to an existing draft release. It creates no Actions artifacts or caches and never runs on a push. Windows packaging is performed locally; Linux and macOS builds can be requested together once the local checks pass. Repository Actions are disabled between releases; enable them only for a deliberate packaging run. Standard public runners are [free under GitHub's runner policy](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
+
+## Codemagic Mac validation
+
+Apple Silicon release validation can instead use `codemagic.yaml`'s manual
+`mac-arm64-handoff` workflow. Check free minutes and keep paid billing disabled
+before starting. It has no automatic triggers, a 20-minute cap, and builds once
+using the release profile for both tests and packaging. Download its DMG and
+validation receipt before publishing the release. The `linux-and-intel` GitHub
+workflow option avoids duplicating that Mac build. Never retry a failed cloud
+build before reading its logs and addressing the cause.
 
 ## GitHub browser sign-in
 

@@ -1,5 +1,6 @@
-// A real round trip through Cricket's pinned croc binary. Local relay by default;
+// A real round trip through Cricket's pinned croc binary. Auto transport by default;
 // --public-relay opts into sending a generated test fixture via croc's public relay.
+// --force-relay tests relay fallback explicitly. Never used by the application.
 import { spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
@@ -123,9 +124,9 @@ try {
     [
       ...flags,
       "send",
-      "--transport",
-      "relay",
-      "--no-local",
+      ...(process.argv.includes("--force-relay")
+        ? ["--transport", "relay", "--no-local"]
+        : []),
       "--",
       folderTest ? sendFolder : input,
     ],
@@ -169,7 +170,7 @@ try {
     throw new Error("Received file content does not match");
   }
   console.log(
-    `PASS: real croc send + receive, ${folderTest ? "nested folder, empty folder, Unicode filename, binary content" : "spaced filename, UTF-8 content"}, SHA-256 equality, ${publicRelay ? "public relay" : "local relay only"}.`,
+    `PASS: real croc send + receive, ${folderTest ? "nested folder, empty folder, Unicode filename, binary content" : "spaced filename, UTF-8 content"}, SHA-256 equality, ${process.argv.includes("--force-relay") ? "explicit relay fallback" : "normal automatic transport"}, ${publicRelay ? "public rendezvous" : "loopback rendezvous"}.`,
   );
 } catch (error) {
   console.error(error.message);

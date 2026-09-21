@@ -2,17 +2,19 @@
 
 ## Install the desktop preview
 
-Use the [download table in the README](../README.md#download-and-install) for the correct package: **0.1.2 for Windows/Linux**, or **0.1.1 for macOS**. Download checksums from the matching release page. macOS 0.1.1 does not include the sender-side relay checks added in 0.1.2.
+Use the [download table in the README](../README.md#download-and-install) for **0.1.3 on Windows, Linux and macOS**. Download checksums from the matching release page. Update both devices to restore normal croc connection selection, including local discovery; retry old failed transfers from the updated sender.
 
 | Computer                 | Package          | Install                                                                                          |
 | ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------ |
 | Windows x64              | `x64-setup.exe`  | Open the installer. For the portable ZIP, extract the whole folder before opening `Cricket.exe`. |
-| Linux x64, Debian/Ubuntu | `amd64.deb`      | Install with your package manager, for example `sudo apt install ./Cricket_0.1.2_amd64.deb`.     |
+| Linux x64, Debian/Ubuntu | `amd64.deb`      | Install with your package manager, for example `sudo apt install ./Cricket_0.1.3_amd64.deb`.     |
 | Linux x64, AppImage      | `amd64.AppImage` | Make the downloaded file executable, then open it.                                               |
 | Apple Silicon Mac        | `aarch64.dmg`    | Open the disk image and drag Cricket into Applications.                                          |
 | Intel Mac                | `x64.dmg`        | Open the disk image and drag Cricket into Applications.                                          |
 
 Linux packages are built on Ubuntu 22.04; other distributions must provide compatible system libraries. These preview packages are unsigned and Mac builds are not notarized, so the OS may show a trust prompt. See [verification details](VALIDATION.md) for the scope of testing.
+
+For Fedora KDE Plasma, use the **AppImage**, not the DEB. In Dolphin, open Properties → Permissions and enable execution, then open the AppImage. If FUSE is unavailable, try `./Cricket_0.1.3_amd64.AppImage --appimage-extract-and-run`. Keep a Secret Service-compatible wallet unlocked for sign-in. Local discovery also depends on the network/firewall allowing croc; guest Wi-Fi client isolation can prevent local connections. Cricket does not automatically change firewall rules.
 
 ## Preview sign-in
 

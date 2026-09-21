@@ -4,7 +4,7 @@
 
 **Send files and folders between Windows, Linux and macOS computers with a lightweight desktop GUI for [croc](https://github.com/schollz/croc).** Choose a chat, add files and click **Send**. Cricket handles transfer codes for you and shows delivery receipts for your devices, friends and groups.
 
-File contents travel through croc's encrypted relay connection. Your GitHub account provides private chats and transfer history. Both computers need Cricket, a GitHub account and an internet connection; keep both apps running until the transfer completes.
+File contents travel through croc's encrypted connection, using its normal automatic transport and local discovery. Cricket does not force an internet relay. Your GitHub account provides private chats and transfer history, so internet access is still needed for chat coordination. Keep both apps running until the transfer completes.
 
 [Download Cricket](https://github.com/eddieyzhan/Cricket/releases) · [First transfer](#send-your-first-file) · [Troubleshooting](#troubleshooting) · [Build from source](docs/DEVELOPMENT.md)
 
@@ -12,15 +12,15 @@ File contents travel through croc's encrypted relay connection. Your GitHub acco
 
 ## Download and install
 
-Cricket is an **early preview**. Windows and Linux packages are at **0.1.2**, including the relay-selection fix. The available macOS packages are **0.1.1** and do not include that fix. [See what has been tested](docs/VALIDATION.md).
+Cricket is an **early preview**. Version **0.1.3** restores croc's normal connection selection on Windows, Linux and macOS. Update both devices, especially the sender, and retry existing failed offers after updating. [See what has been tested](docs/VALIDATION.md).
 
 | Your computer | Download | How to install |
 | --- | --- | --- |
-| Windows x64 | [Installer](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_x64-setup.exe) or [portable ZIP](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_windows_x64-portable.zip) | Run the installer, or extract the **whole ZIP** and open `Cricket.exe`. |
-| Debian / Ubuntu x64 | [DEB package](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_amd64.deb) | In the download folder, run `sudo apt install ./Cricket_0.1.2_amd64.deb`. |
-| Other Linux x64 | [AppImage](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.2/Cricket_0.1.2_amd64.AppImage) | Make it executable with `chmod +x Cricket_0.1.2_amd64.AppImage`, then run `./Cricket_0.1.2_amd64.AppImage`. Compatible system libraries are required. |
-| Apple Silicon Mac | [DMG, preview 0.1.1](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.1/Cricket_0.1.1_aarch64.dmg) | Open the disk image and drag Cricket into Applications. |
-| Intel Mac | [DMG, preview 0.1.1](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.1/Cricket_0.1.1_x64.dmg) | Open the disk image and drag Cricket into Applications. |
+| Windows x64 | [Installer](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.3/Cricket_0.1.3_x64-setup.exe) or [portable ZIP](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.3/Cricket_0.1.3_windows_x64-portable.zip) | Run the installer, or extract the **whole ZIP** and open `Cricket.exe`. |
+| Debian / Ubuntu x64 | [DEB package](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.3/Cricket_0.1.3_amd64.deb) | In the download folder, run `sudo apt install ./Cricket_0.1.3_amd64.deb`. |
+| Fedora KDE / other Linux x64 | [AppImage](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.3/Cricket_0.1.3_amd64.AppImage) | Make it executable with `chmod +x Cricket_0.1.3_amd64.AppImage`, then run `./Cricket_0.1.3_amd64.AppImage`. Compatible system libraries are required. |
+| Apple Silicon Mac | [DMG](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.3/Cricket_0.1.3_aarch64.dmg) | Open the disk image and drag Cricket into Applications. |
+| Intel Mac | [DMG](https://github.com/eddieyzhan/Cricket/releases/download/v0.1.3/Cricket_0.1.3_x64.dmg) | Open the disk image and drag Cricket into Applications. |
 
 Packaged builds include **croc 11.5.3**. You do **not** need Node.js, Rust or a separate croc installation to use them. Packages are unsigned; Mac builds are not notarized. Checksums are on the corresponding release page. See the [platform setup guide](docs/SETUP.md) for prerequisites and sign-in options.
 
@@ -48,7 +48,7 @@ Open Cricket and click **Sign in with GitHub CLI**. You can instead choose **Use
 
 1. Select the chat on the sending computer.
 2. Drag in files or folders, or use **Add files** / **Add folders**.
-3. Click **Send**. Cricket 0.1.2 checks for a working relay before sharing the offer, so preparation may take several seconds.
+3. Click **Send**. Cricket shares the offer and starts croc without a public-relay preflight.
 4. On the receiving computer, open the chat, click **Receive** and choose a download folder. Cricket creates a new subfolder for the transfer.
 5. Wait for **Received**. Keep both computers online and Cricket running while files transfer.
 
@@ -56,10 +56,10 @@ A new offer waits for up to **15 minutes**. Closing the window keeps Cricket in 
 
 ## What Cricket does
 
-- **File and folder sharing:** transfer individual files or whole directories through an encrypted croc relay connection.
+- **File and folder sharing:** transfer individual files or whole directories through croc's encrypted connection, with automatic transport selection and local discovery enabled.
 - **Transfers between your own devices:** one GitHub account, with a shared transfer history.
 - **Sharing with friends and groups:** saved usernames, private chat repositories and per-recipient receipts.
-- **Retry failed transfers:** resend from the original computer without losing the transfer history. Version 0.1.2 checks candidate relays and retains useful failure explanations.
+- **Retry failed transfers:** resend from the original computer with a fresh connection code, without losing history or useful failure explanations.
 - **Lightweight desktop interface:** Tauri uses the system webview; there is no bundled Chromium or Node runtime.
 - **Agent and CLI access:** an authenticated local API and Node helper support scripted transfers. See the [agent guide](docs/AGENT.md).
 
@@ -69,7 +69,7 @@ Cricket is for sending files while both sides are online. It does not provide of
 
 | Problem | What to try |
 | --- | --- |
-| Transfer fails a few seconds after **Receive** | Update the **sending computer** to 0.1.2, then click **Retry** there and **Receive** again on the other computer. Updating only the receiver cannot move an existing offer to a working relay. |
+| Transfer fails a few seconds after **Receive** | Update both computers to 0.1.3, then click **Retry** on the sender and **Receive** again on the other computer. croc selects the connection; public-relay outages and network restrictions can still cause failures. |
 | Transfer expired or the sender went offline | Keep both apps open. The receiver can choose **Ask to resend**; the original sending computer must choose **Retry**. |
 | Source files changed or moved | Add the files again and create a new transfer. Retry checks the original files before sending. |
 | Chat does not appear | Check the GitHub account, accept the invitation and click **Sync chats**. **New chat → Join existing chat** can import a known Cricket repository. |
