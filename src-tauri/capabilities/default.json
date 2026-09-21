@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Cricket's local desktop window",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:allow-open", "opener:allow-open-url"]
+}
